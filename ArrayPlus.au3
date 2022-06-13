@@ -14,7 +14,8 @@ Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14,
 ;  Global $aCSVRaw[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 ;  $aSliced = _ArraySlice($aCSVRaw, "[-5:5:-2]")
 
-$aSliced = _ArraySlice($aCSVRaw, "[1][:]")
+;  $aSliced = _ArraySlice($aCSVRaw, "[1,-2,4,2][:]")
+$aSliced = _ArraySlice($aCSVRaw, "[:][1,0, -1]")
 _ArrayDisplay($aSliced)
 ConsoleWrite($aSliced & @CRLF)
 
@@ -46,14 +47,23 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 			Return SetError(1, UBound($aDimGroups), Null)
 	EndSwitch
 
-	Local $iStart1, $iStop1, $iStep1, $iStart2, $iStop2, $iStep2
+	Local $iStart1, $iStop1, $iStep1, $iStart2, $iStop2, $iStep2, $aIndices1, $aIndices2
 
 	; process first dimension group:
-	Local $aRE = StringRegExp($sGroup1, '(?x)(\-?\d+|^\s*(?=:))(?>\:(\-?\d+|(?<=:)))?(?>\:(\-?\d+|(?<=:)))?', 3)
-	If @error Then Return SetError(2, @error, Null)
-	$iStep1 = ((UBound($aRE)) < 3 Or ($aRE[2] == "")) ? 1 : Number($aRE[2])
-	$iStart1 = ($aRE[0] == "") ? ($iStep1 < 0 ? $nN1 - 1 : 0) : Number($aRE[0])    ; with case check for negative step
-	$iStop1 = (UBound($aRE) < 2) ? Null : ($aRE[1] == "") ? ($iStep1 < 0 ? 0 : $nN1 - 1) : Number($aRE[1])
+	Local $aRE = StringRegExp($sGroup1, '(?x)^\s*(\-?\d+|^\s*(?=:))(?>\:(\-?\d+|(?<=:)))?(?>\:(\-?\d+|(?<=:)))?\s*$', 3)
+	If @error Then
+		If Not StringRegExp($sGroup1, '^\s*(\-?\d+)(?:\s*\,\s*\-?\d+)*\s*$') Then Return SetError(2, @error, Null) ; indices list notation
+		$aIndices1 = StringSplit($sGroup1, ',', 3)
+		For $i = 0 To UBound($aIndices1) - 1
+			$aIndices1[$i] = Number($aIndices1[$i])
+			If $aIndices1[$i] < 0 Then $aIndices1[$i] += $nN1
+			If $aIndices1[$i] >= $nN1 Then Return SetError(3, $aIndices1[$i], Null)
+		Next
+	Else ; range notation
+		$iStep1 = ((UBound($aRE)) < 3 Or ($aRE[2] == "")) ? 1 : Number($aRE[2])
+		$iStart1 = ($aRE[0] == "") ? ($iStep1 < 0 ? $nN1 - 1 : 0) : Number($aRE[0])    ; with case check for negative step
+		$iStop1 = (UBound($aRE) < 2) ? Null : ($aRE[1] == "") ? ($iStep1 < 0 ? 0 : $nN1 - 1) : Number($aRE[1])
+	EndIf
 
 	; process second dimension group:
 	If $nGroups = 2 Then
@@ -105,18 +115,38 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 					Return $aRet
 
 				Case Else ; normal 2D slice
-					Local $aRet[$iN1][$iN2], $iR = 0, $iC
 
-					For $i = $iStart1 To $iStop1 Step $iStep1
-						$iC = 0
-						For $j = $iStart2 To $iStop2 Step $iStep2
-							$aRet[$iR][$iC] = $aArray[$i][$j]
-							$iC += 1
-						Next
+					Select
+						;  Case IsArray($aIndices2) And IsArray($aIndices1)
 
-						$iR += 1
-					Next
-					Return $aRet
+						Case IsArray($aIndices1)
+							Local $aRet[UBound($aIndices1)][$iN2], $iR = 0, $iC
+							For $iIndex1 In $aIndices1
+								$iC = 0
+								For $j = $iStart2 To $iStop2 Step $iStep2
+									$aRet[$iR][$iC] = $aArray[$iIndex1][$j]
+									$iC += 1
+								Next
+
+								$iR += 1
+							Next
+							Return $aRet
+
+						;  Case IsArray($aIndices2)
+						Case Else
+							Local $aRet[$iN1][$iN2], $iR = 0, $iC
+
+							For $i = $iStart1 To $iStop1 Step $iStep1
+								$iC = 0
+								For $j = $iStart2 To $iStop2 Step $iStep2
+									$aRet[$iR][$iC] = $aArray[$i][$j]
+									$iC += 1
+								Next
+
+								$iR += 1
+							Next
+							Return $aRet
+					EndSelect
 			EndSelect
 	EndSwitch
 
