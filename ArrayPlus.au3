@@ -10,26 +10,21 @@
 ;  _ArrayDisplay($aCSVRaw)
 
 
-Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
+;  Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
 ;  Global $aCSVRaw[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-;  $aSliced = _ArraySlice($aCSVRaw, "[-5:5:-2]")
+;  $aSliced = _ArraySlice($aCSVRaw, "6,8,9,6")
 
 ;  $aSliced = _ArraySlice($aCSVRaw, "[1,-2,4,2][1]")
-$aSliced = _ArraySlice($aCSVRaw, "[:][1,0, -1]")
-ConsoleWrite(UBound($aSliced, 0) & @TAB & UBound($aSliced, 1) & @TAB & UBound($aSliced, 2) & @CRLF)
-_ArrayDisplay($aSliced)
-ConsoleWrite($aSliced & @CRLF)
+;  $aSliced = _ArraySlice($aCSVRaw, "[1,3,5][2,1,0]")
+;  ConsoleWrite(UBound($aSliced, 0) & @TAB & UBound($aSliced, 1) & @TAB & UBound($aSliced, 2) & @CRLF)
+;  _ArrayDisplay($aSliced)
+;  ConsoleWrite($aSliced & @CRLF)
 
 ; Python-like array slicing
 Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 	Local $nDims = UBound($aArray, 0), _
 			$nN1 = UBound($aArray, 1), _
 			$nN2 = UBound($aArray, 2)
-
-	;  https://stackoverflow.com/a/509295
-
-	; Testen: https://onecompiler.com/python/3y6jbpfgx
-
 
 	Local $aDimGroups = StringRegExp($sSliceString, '^\s*(?>\[([^\[]*)\]\s*(?>\[([^\[]*)\])?|\[?([^\[]*)\]?\s*$)\s*$', 3)
 	Local $nGroups, $sGroup1, $sGroup2
@@ -68,11 +63,20 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 
 	; process second dimension group:
 	If $nGroups = 2 Then
-		$aRE = StringRegExp($sGroup2, '(?x)(\-?\d+|^\s*(?=:))(?>\:(\-?\d+|(?<=:)))?(?>\:(\-?\d+|(?<=:)))?', 3)
-		If @error Then Return SetError(2, @error, Null)
-		$iStep2 = ((UBound($aRE)) < 3 Or ($aRE[2] == "")) ? 1 : Number($aRE[2])
-		$iStart2 = ($aRE[0] == "") ? ($iStep2 < 0 ? $nN2 - 1 : 0) : Number($aRE[0])
-		$iStop2 = (UBound($aRE) < 2) ? Null : ($aRE[1] == "") ? ($iStep2 < 0 ? 0 : $nN2 - 1) : Number($aRE[1])
+		$aRE = StringRegExp($sGroup2, '(?x)^\s*(\-?\d+|^\s*(?=:))(?>\:(\-?\d+|(?<=:)))?(?>\:(\-?\d+|(?<=:)))?\s*$', 3)
+		If @error Then
+			If Not StringRegExp($sGroup2, '^\s*(\-?\d+)(?:\s*\,\s*\-?\d+)*\s*$') Then Return SetError(3, @error, Null) ; indices list notation
+			$aIndices2 = StringSplit($sGroup2, ',', 3)
+			For $i = 0 To UBound($aIndices2) - 1
+				$aIndices2[$i] = Number($aIndices2[$i])
+				If $aIndices2[$i] < 0 Then $aIndices2[$i] += $nN2
+				If $aIndices2[$i] >= $nN2 Then Return SetError(3, $aIndices2[$i], Null)
+			Next
+		Else ; range notation
+			$iStep2 = ((UBound($aRE)) < 3 Or ($aRE[2] == "")) ? 1 : Number($aRE[2])
+			$iStart2 = ($aRE[0] == "") ? ($iStep2 < 0 ? $nN2 - 1 : 0) : Number($aRE[0])    ; with case check for negative step
+			$iStop2 = (UBound($aRE) < 2) ? Null : ($aRE[1] == "") ? ($iStep2 < 0 ? 0 : $nN2 - 1) : Number($aRE[1])
+		EndIf
 	EndIf
 
 	If $iStart1 < 0 Then $iStart1 += $nN1
@@ -85,15 +89,25 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 
 	Switch UBound($aArray, 0)
 		Case 1 ; 1D-Array
-			Local $aRet[$iN1], $iC = 0
+			If IsArray($aIndices1) Then
+				Local $aRet[UBound($aIndices1)], $iC = 0
 
-			For $i = $iStart1 To $iStop1 Step $iStep1
-				$aRet[$iC] = $aArray[$i]
-				$iC += 1
-			Next
-			Return $aRet
+				For $i In $aIndices1
+					$aRet[$iC] = $aArray[$i]
+					$iC += 1
+				Next
+				Return $aRet
+			Else
+				Local $aRet[$iN1], $iC = 0
+
+				For $i = $iStart1 To $iStop1 Step $iStep1
+					$aRet[$iC] = $aArray[$i]
+					$iC += 1
+				Next
+				Return $aRet
+			EndIf
+
 		Case 2 ; 2D-Array
-
 			; check for special cases
 			Select
 				Case (IsKeyword($iStop1) = 2) And (IsKeyword($iStop2) = 2) ; a single value
@@ -126,9 +140,21 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 
 				Case Else ; normal 2D slice
 
-					Select
-						;  Case IsArray($aIndices2) And IsArray($aIndices1)
+					Select  ; index list in both dimensions
+						Case IsArray($aIndices2) And IsArray($aIndices1)
 
+							Local $aRet[UBound($aIndices1)][UBound($aIndices2)], $iR = 0, $iC
+							For $iIndex1 In $aIndices1
+								$iC = 0
+								For $iIndex2 In $aIndices2
+									$aRet[$iR][$iC] = $aArray[$iIndex1][$iIndex2]
+									$iC += 1
+								Next
+								$iR += 1
+							Next
+							Return $aRet
+
+							;  index list in dimension 1
 						Case IsArray($aIndices1)
 							Local $aRet[UBound($aIndices1)][$iN2], $iR = 0, $iC
 							For $iIndex1 In $aIndices1
@@ -142,7 +168,20 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 							Next
 							Return $aRet
 
-							;  Case IsArray($aIndices2)
+							;  index list in dimension 2
+						Case IsArray($aIndices2)
+							Local $aRet[$iN1][UBound($aIndices2)], $iR = 0, $iC
+							For $i = $iStart1 To $iStop1 Step $iStep1
+								$iC = 0
+								For $iIndex2 In $aIndices2
+									$aRet[$iR][$iC] = $aArray[$i][$iIndex2]
+									$iC += 1
+								Next
+								$iR += 1
+							Next
+							Return $aRet
+
+							; range definition only
 						Case Else
 							Local $aRet[$iN1][$iN2], $iR = 0, $iC
 
@@ -159,7 +198,6 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 					EndSelect
 			EndSelect
 	EndSwitch
-
 EndFunc   ;==>_ArraySlice
 
 
@@ -245,15 +283,10 @@ Func _ArrayRangeCreate($nStart, $nStop, $nStep = 1, $vDefault = Default)
 	Local $aRange[$iN] = [(($vDefault = Default) ? $nStart : (IsFunc($vDefault) ? $vDefault($nStart) : $vDefault))]
 	Local $nCurrent = $nStart
 
-	;  ConsoleWrite($nCurrent & @TAB)
 	For $i = 1 To $iN - 1
 		$nCurrent += $nStep
-		;  ConsoleWrite($nCurrent & @TAB)
 		$aRange[$i] = $vDefault = Default ? $nCurrent : (IsFunc($vDefault) ? $vDefault($nCurrent) : $vDefault)
 	Next
-	;  ConsoleWrite(@CRLF)
-
-	;  _ArrayDisplay($aRange)
 	Return $aRange
 EndFunc   ;==>_ArrayRangeCreate
 
