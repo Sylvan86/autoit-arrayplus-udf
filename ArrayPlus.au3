@@ -14,8 +14,9 @@ Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14,
 ;  Global $aCSVRaw[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 ;  $aSliced = _ArraySlice($aCSVRaw, "[-5:5:-2]")
 
-;  $aSliced = _ArraySlice($aCSVRaw, "[1,-2,4,2][:]")
+;  $aSliced = _ArraySlice($aCSVRaw, "[1,-2,4,2][1]")
 $aSliced = _ArraySlice($aCSVRaw, "[:][1,0, -1]")
+ConsoleWrite(UBound($aSliced, 0) & @TAB & UBound($aSliced, 1) & @TAB & UBound($aSliced, 2) & @CRLF)
 _ArrayDisplay($aSliced)
 ConsoleWrite($aSliced & @CRLF)
 
@@ -107,12 +108,21 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 					Return $aRet
 
 				Case IsKeyword($iStop2) = 2    ; a single column
-					Local $aRet[$iN1], $iC = 0
-					For $i = $iStart1 To $iStop1 Step $iStep1
-						$aRet[$iC] = $aArray[$i][$iStart2]
-						$iC += 1
-					Next
-					Return $aRet
+					If IsArray($aIndices1) Then ; case for list of indices in first dim
+						Local $aRet[UBound($aIndices1)], $iC = 0
+						For $iIndex1 In $aIndices1
+							$aRet[$iC] = $aArray[$iIndex1][$iStart2]
+							$iC += 1
+						Next
+						Return $aRet
+					Else ; case for array range in first dim
+						Local $aRet[$iN1], $iC = 0
+						For $i = $iStart1 To $iStop1 Step $iStep1
+							$aRet[$iC] = $aArray[$i][$iStart2]
+							$iC += 1
+						Next
+						Return $aRet
+					EndIf
 
 				Case Else ; normal 2D slice
 
@@ -132,7 +142,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 							Next
 							Return $aRet
 
-						;  Case IsArray($aIndices2)
+							;  Case IsArray($aIndices2)
 						Case Else
 							Local $aRet[$iN1][$iN2], $iR = 0, $iC
 
