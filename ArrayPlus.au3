@@ -3,6 +3,10 @@
 #include <File.au3>
 
 
+Global Enum Step *2 $A2C_BORDERS, $A2C_ALIGNDEC, $A2C_CENTERHEADENTRIES, $A2C_FIRSTROWHEADER, $A2C_TOCONSOLE
+
+
+
 ;  Func _ArrayDisplay(Const ByRef $aArray, $sTitle = Default, $sArrayRange = Default, $iFlags = Default, $vUser_Separator = Default, $sHeader = Default, $iMax_ColWidth = Default)
 
 ;  Global $aCSVRaw
@@ -19,6 +23,173 @@
 ;  ConsoleWrite(UBound($aSliced, 0) & @TAB & UBound($aSliced, 1) & @TAB & UBound($aSliced, 2) & @CRLF)
 ;  _ArrayDisplay($aSliced)
 ;  ConsoleWrite($aSliced & @CRLF)
+
+
+
+
+;  _ArrayAlignDec(_ArrayCreate("[20.65, 4.1, 9999999, 10000.2, 100.2, 'Test', 23.765]"), Default, 2)
+
+
+Func __stringCenter($sString, $nChars = Default)
+	If $nChars = Default Then
+		$nChars = StringLen($sString)
+	EndIf
+	$sString = StringStripWS($sString, 3)
+	Local $nString = StringLen($sString)
+
+	If $nChars < $nString Or $nChars < 1 Then Return SetError(1, $nChars, Null)
+
+	Return StringFormat("%" & Ceiling(($nChars - $nString) / 2) & "s%" & _
+			$nString & "s%" & _
+			Floor(($nChars - $nString) / 2) & "s", _
+			"", $sString, "")
+EndFunc   ;==>__stringCenter
+
+Func _ArrayAlignDec(ByRef $aArray, $iColumn = Default, $iDecimals = Default, $bTrailingZeros = False)
+	Local $aParts, $nN = UBound($aArray), $nMaxReal, $nMaxDec = 0, $nMaxCol, $vVal, $nReal, $nDec
+
+	; determine sizes:
+	For $i = 0 To $nN - 1
+		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
+
+		If IsFloat($vVal) Then
+			$aParts = StringSplit($vVal, ".", 3)
+			If StringLen($aParts[0]) > $nMaxReal Then $nMaxReal = StringLen($aParts[0])
+			If StringLen($aParts[1]) > $nMaxDec Then $nMaxDec = StringLen($aParts[1])
+		ElseIf IsInt($vVal) Then
+			If $nMaxReal < StringLen($vVal) Then $nMaxReal = StringLen($vVal)
+			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
+		Else
+			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
+		EndIf
+	Next
+	If ($iDecimals <> Default) And ($iDecimals < $nMaxDec) Then $nMaxDec = $iDecimals
+	If $nMaxDec > 0 And ($nMaxCol < ($nMaxReal + 1 + $nMaxDec)) Then $nMaxCol = $nMaxReal + 1 + $nMaxDec
+	If $nMaxDec > 0 And ($nMaxCol > ($nMaxReal + 1 + $nMaxDec)) Then $nMaxReal = $nMaxCol - 1 - $nMaxDec
+
+	For $i = 0 To $nN - 1
+		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
+
+		If IsFloat($vVal) Then
+			$vVal = StringFormat("%" & $nMaxReal + 1 + $nMaxDec & "." & $nMaxDec & "f", $vVal)
+			If Not $bTrailingZeros Then $vVal = StringRegExpReplace($vVal, '(0(?=0*$))', ' ')
+
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+
+		ElseIf IsInt($vVal) And $nMaxDec > 0 Then
+			$vVal = StringFormat("% " & $nMaxReal & "s%-" & $nMaxDec + 1 & "s", $vVal, " ")
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+		Else
+			$vVal = StringFormat("% " & $nMaxCol & "s", $vVal)
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+		EndIf
+	Next
+
+	Return SetExtended($nMaxDec, $nMaxCol)
+EndFunc   ;==>_ArrayAlignDec
+
+
+
+
+
+
+Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES) ; BitAND($dFlags, $A2C_BORDERS) = True, , $bAlignDec = True, $bCenterHeadEntries)
+	Local $nR = UBound($aArray), $nC = UBound($aArray, 2)
+
+	If UBound($aArray, 0) = 1 Then ; 1D-array
+
+	Else ; 2D-array
+		Local $aSizes[$nC], $vTemp, $sOut = "", $aTmp
+
+		; determine column widths
+		If BitAND($dFlags, $A2C_ALIGNDEC) Then
+			For $iC = 0 To $nC - 1
+				$aSizes[$iC] = _ArrayAlignDec($aArray, $iC, $iDecimals)
+			Next
+		Else
+			For $iC = 0 To $nC - 1
+				For $iR = 0 To $nR - 1
+					$vTemp = (IsFloat($aArray[$iR][$iC]) And $iDecimals <> Default) ? StringFormat("%." & $iDecimals & "f", $aArray[$iR][$iC]) : $aArray[$iR][$iC]
+					If StringLen($vTemp) > $aSizes[$iC] Then $aSizes[$iC] = StringLen($vTemp)
+				Next
+			Next
+		EndIf
+
+		If $sHeader <> Default Then ; header treatment
+			Local $aHeader
+			If (IsBool($sHeader) And $sHeader = True) Or BitAND($dFlags, $A2C_FIRSTROWHEADER) Then ; first row = header row
+				$dFlags = BitOR($dFlags, $A2C_FIRSTROWHEADER)
+				$aHeader = _ArraySlice($aArray, "[0][:]")
+			Else
+				$aHeader = StringRegExp($sHeader, '\h*([^,]*[^\h,])', 3)
+			EndIf
+
+			If UBound($aHeader) <> $nC Then Return SetError(1, UBound($aHeader), Null)
+
+			For $iH = 0 To UBound($aHeader) - 1
+				If StringLen($aHeader[$iH]) > $aSizes[$iH] Then $aSizes[$iH] = StringLen($aHeader[$iH])
+
+				$sOut &= BitAND($dFlags, $A2C_CENTERHEADENTRIES) ? _
+						__stringCenter($aHeader[$iH], $aSizes[$iH]) & ($iH = $nC - 1 ? "" : $cSep) : _
+						StringFormat("% " & $aSizes[$iH] & "s", $aHeader[$iH]) & ($iH = $nC - 1 ? "" : $cSep)
+			Next
+			$sOut &= @CRLF
+
+			; header seperator
+			For $iC = 0 To $nC - 1
+				For $i = 1 To $aSizes[$iC] + ($iC = $nC - 1 ? 0 : StringLen($cSep))
+					$sOut &= "-"
+				Next
+			Next
+			$sOut &= @CRLF
+		EndIf
+
+		;  print data
+		For $iR = (BitAND($dFlags, $A2C_FIRSTROWHEADER) ? 1 : 0) To $nR - 1
+			For $iC = 0 To $nC - 1
+
+				If BitAND($dFlags, $A2C_ALIGNDEC) Then
+					$sOut &= StringFormat("% " & $aSizes[$iC] & "s", $aArray[$iR][$iC]) & ($iC = $nC - 1 ? "" : $cSep)
+				Else
+					$sOut &= StringFormat("%" & $aSizes[$iC] & "s", $aArray[$iR][$iC]) & ($iC = $nC - 1 ? "" : $cSep)
+				EndIf
+			Next
+			$sOut &= @CRLF
+		Next
+
+		; lower border
+		If BitAND($dFlags, $A2C_BORDERS) Then
+			Local $sBorder = ""
+			For $iC = 0 To $nC - 1
+				For $i = 1 To $aSizes[$iC] + ($iC = $nC - 1 ? 0 : StringLen($cSep))
+					$sBorder &= "="
+				Next
+			Next
+			$sOut = $sBorder & @CRLF & $sOut & $sBorder & @CRLF
+		EndIf
+
+		If BitAND($dFlags, $A2C_TOCONSOLE) Then ConsoleWrite($sOut)
+		Return $sOut
+	EndIf
+
+EndFunc   ;==>_Array2String
+
+
+
+
+
 
 ; Python-like array slicing
 Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
@@ -203,15 +374,14 @@ EndFunc   ;==>_ArraySlice
 
 
 
-Func _Array2Console(Const ByRef $aArray, $sHeader = Default)
 
-EndFunc   ;==>_Array2Console
 
 
 ;  $aTest = _ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]")
 ;  $aTest = _ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]", Default, True)
-;  $aTest = _ArrayCreate("[1, "2 zwei', 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]")
+;  $aTest = _ArrayCreate("[1, '2 zwei', 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]")
 ;  $aTest = _ArrayCreate("2:20:0.5", sqrt)
+;  _ArrayDisplay($aTest)
 Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 	Local $aRE = StringRegExp($sArrayDef, '(?x)^\s*\[?\s*(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ):(?>(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?(?>:(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?\s*\]?\s*$', 3)
 
@@ -274,7 +444,7 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 EndFunc   ;==>_ArrayCreate
 
 
-Func _ArrayRangeCreate($nStart, $nStop, $nStep = 1, $vDefault = Default)
+Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDefault = Default)
 	If Not IsNumber($nStart) Then Return SetError(1, 0, Null)
 	If Not IsNumber($nStop) Then Return SetError(2, 0, Null)
 	If Not IsNumber($nStep) Then Return SetError(3, 0, Null)
@@ -290,10 +460,3 @@ Func _ArrayRangeCreate($nStart, $nStop, $nStep = 1, $vDefault = Default)
 	Return $aRange
 EndFunc   ;==>_ArrayRangeCreate
 
-
-
-Func _ArrayCountIf(ByRef $aArray, Const $fFunc)
-
-	;  If IsString($fFunc) Then
-
-EndFunc   ;==>_ArrayCountIf
