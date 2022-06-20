@@ -101,17 +101,18 @@ Func _ArrayAlignDec(ByRef $aArray, $iColumn = Default, $iDecimals = Default, $bT
 EndFunc   ;==>_ArrayAlignDec
 
 
-
-
-
-
-Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES) ; BitAND($dFlags, $A2C_BORDERS) = True, , $bAlignDec = True, $bCenterHeadEntries)
-	Local $nR = UBound($aArray), $nC = UBound($aArray, 2)
+Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES, $cRowSep = @CRLF) 
+	Local $nR = UBound($aArray, 1), $nC = UBound($aArray, 2), $sOut = ""
 
 	If UBound($aArray, 0) = 1 Then ; 1D-array
 
+		If BitAND($dFlags, $A2C_ALIGNDEC) Then _ArrayAlignDec($aArray)
+
+		For $i = 0 To UBound($aArray) - 1
+			$sOut &= $aArray[$i] & $cRowSep
+		Next
 	Else ; 2D-array
-		Local $aSizes[$nC], $vTemp, $sOut = "", $aTmp
+		Local $aSizes[$nC], $vTemp, $aTmp
 
 		; determine column widths
 		If BitAND($dFlags, $A2C_ALIGNDEC) Then
@@ -179,10 +180,10 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 			Next
 			$sOut = $sBorder & @CRLF & $sOut & $sBorder & @CRLF
 		EndIf
-
-		If BitAND($dFlags, $A2C_TOCONSOLE) Then ConsoleWrite($sOut)
-		Return $sOut
 	EndIf
+
+	If BitAND($dFlags, $A2C_TOCONSOLE) Then ConsoleWrite($sOut)
+	Return $sOut
 
 EndFunc   ;==>_Array2String
 
