@@ -1,3 +1,13 @@
+; #INDEX# =======================================================================================================================
+; Title .........: ArrayPlus-UDF
+; Version .......: 0.1
+; AutoIt Version : 3.3.16.0
+; Language ......: english (german maybe by accident)
+; Description ...: advanced helpers for array handling
+; Author(s) .....: AspirinJunkie
+; Last changed ..: 2022-06-22
+; ===============================================================================================================================
+
 #include-once
 #include <Array.au3>
 #include <File.au3>
@@ -6,101 +16,32 @@
 Global Enum Step *2 $A2C_BORDERS, $A2C_ALIGNDEC, $A2C_CENTERHEADENTRIES, $A2C_FIRSTROWHEADER, $A2C_TOCONSOLE
 
 
-
-;  Func _ArrayDisplay(Const ByRef $aArray, $sTitle = Default, $sArrayRange = Default, $iFlags = Default, $vUser_Separator = Default, $sHeader = Default, $iMax_ColWidth = Default)
-
-;  Global $aCSVRaw
-;  _FileReadToArray("TempOessterreich.txt", $aCSVRaw, 4, @TAB)
-;  _ArrayDisplay($aCSVRaw)
-
-
-;  Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
-;  Global $aCSVRaw[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-;  $aSliced = _ArraySlice($aCSVRaw, "6,8,9,6")
-
-;  $aSliced = _ArraySlice($aCSVRaw, "[1,-2,4,2][1]")
-;  $aSliced = _ArraySlice($aCSVRaw, "[1,3,5][2,1,0]")
-;  ConsoleWrite(UBound($aSliced, 0) & @TAB & UBound($aSliced, 1) & @TAB & UBound($aSliced, 2) & @CRLF)
-;  _ArrayDisplay($aSliced)
-;  ConsoleWrite($aSliced & @CRLF)
-
-
-
-
-;  _ArrayAlignDec(_ArrayCreate("[20.65, 4.1, 9999999, 10000.2, 100.2, 'Test', 23.765]"), Default, 2)
-
-
-Func __stringCenter($sString, $nChars = Default)
-	If $nChars = Default Then
-		$nChars = StringLen($sString)
-	EndIf
-	$sString = StringStripWS($sString, 3)
-	Local $nString = StringLen($sString)
-
-	If $nChars < $nString Or $nChars < 1 Then Return SetError(1, $nChars, Null)
-
-	Return StringFormat("%" & Ceiling(($nChars - $nString) / 2) & "s%" & _
-			$nString & "s%" & _
-			Floor(($nChars - $nString) / 2) & "s", _
-			"", $sString, "")
-EndFunc   ;==>__stringCenter
-
-Func _ArrayAlignDec(ByRef $aArray, $iColumn = Default, $iDecimals = Default, $bTrailingZeros = False)
-	Local $aParts, $nN = UBound($aArray), $nMaxReal, $nMaxDec = 0, $nMaxCol, $vVal, $nReal, $nDec
-
-	; determine sizes:
-	For $i = 0 To $nN - 1
-		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
-
-		If IsFloat($vVal) Then
-			$aParts = StringSplit($vVal, ".", 3)
-			If StringLen($aParts[0]) > $nMaxReal Then $nMaxReal = StringLen($aParts[0])
-			If StringLen($aParts[1]) > $nMaxDec Then $nMaxDec = StringLen($aParts[1])
-		ElseIf IsInt($vVal) Then
-			If $nMaxReal < StringLen($vVal) Then $nMaxReal = StringLen($vVal)
-			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
-		Else
-			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
-		EndIf
-	Next
-	If ($iDecimals <> Default) And ($iDecimals < $nMaxDec) Then $nMaxDec = $iDecimals
-	If $nMaxDec > 0 And ($nMaxCol < ($nMaxReal + 1 + $nMaxDec)) Then $nMaxCol = $nMaxReal + 1 + $nMaxDec
-	If $nMaxDec > 0 And ($nMaxCol > ($nMaxReal + 1 + $nMaxDec)) Then $nMaxReal = $nMaxCol - 1 - $nMaxDec
-
-	For $i = 0 To $nN - 1
-		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
-
-		If IsFloat($vVal) Then
-			$vVal = StringFormat("%" & $nMaxReal + 1 + $nMaxDec & "." & $nMaxDec & "f", $vVal)
-			If Not $bTrailingZeros Then $vVal = StringRegExpReplace($vVal, '(0(?=0*$))', ' ')
-
-			If $iColumn = Default Then
-				$aArray[$i] = $vVal
-			Else
-				$aArray[$i][$iColumn] = $vVal
-			EndIf
-
-		ElseIf IsInt($vVal) And $nMaxDec > 0 Then
-			$vVal = StringFormat("% " & $nMaxReal & "s%-" & $nMaxDec + 1 & "s", $vVal, " ")
-			If $iColumn = Default Then
-				$aArray[$i] = $vVal
-			Else
-				$aArray[$i][$iColumn] = $vVal
-			EndIf
-		Else
-			$vVal = StringFormat("% " & $nMaxCol & "s", $vVal)
-			If $iColumn = Default Then
-				$aArray[$i] = $vVal
-			Else
-				$aArray[$i][$iColumn] = $vVal
-			EndIf
-		EndIf
-	Next
-
-	Return SetExtended($nMaxDec, $nMaxCol)
-EndFunc   ;==>_ArrayAlignDec
-
-
+; #FUNCTION# ======================================================================================
+; Name ..........: _Array2String()
+; Description ...: print a 1D/2D-array to console or variable clearly arranged
+; Syntax ........: _Array2String($aArray[, $sHeader = Default[, $cSep = " | "[, $iDecimals = Default[, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES[, $cRowSep = @CRLF]]]]])
+; Parameters ....: $aArray    - 1D or 2D array to be printed
+;                  $sHeader   - [optional] $sHeader = Default: no header to print (default:Default)
+;                  |$sHeader = True:     first row = header values
+;                  |$sHeader = comma separated string: header values
+;                  $cSep      - [optional] column separater string (default:" | ")
+;                  $iDecimals - [optional] number of decimal places to round for floating point values (default:Default)
+;                  $dFlags    - [optional] Bitmask for serveral options: (default:$A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES)
+;                  |(1) $A2C_BORDERS - print table borders
+;                  |(2) $A2C_ALIGNDEC - align numbers at the decimal point
+;                  |(4) $A2C_CENTERHEADENTRIES - header entries are centered instead of right aligned
+;                  |(8) $A2C_FIRSTROWHEADER - first row = header (concurrenct with $sHeader = True)
+;                  |(16) $A2C_TOCONSOLE - table is also printed to console
+;                  $cRowSep   - [optional] row separator string (default:@CRLF)
+; Return values .: Success: the string form of the array
+;                  Failure
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-20
+; Related .......: __stringCenter, _ArrayAlignDec
+; Example .......: Yes
+;                  Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 4.1, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
+;                  ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
+; =================================================================================================
 Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES, $cRowSep = @CRLF) 
 	Local $nR = UBound($aArray, 1), $nC = UBound($aArray, 2), $sOut = ""
 
@@ -187,12 +128,112 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 
 EndFunc   ;==>_Array2String
 
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayAlignDec()
+; Description ...: align a 1D-array or a column of a 2D-array at the decimal point or right aligned
+; Syntax ........: _ArrayAlignDec(ByRef $aArray[, $iColumn = Default[, $iDecimals = Default[, $bTrailingZeros = False]]])
+; Parameters ....: ByRef $aArray   - 1D or 2D array which values should be char-wise aligned
+;                  |values processed directly in-place
+;                  $iColumn        - [optional] If $aArray = 2D-array: column which should be processed (default:Default)
+;                  $iDecimals      - [optional] number of decimal places to round for floating point values (default:Default)
+;                  $bTrailingZeros - [optional] If true: add trailing zeros to decimal part if necessary (default:False)
+; Return values .: Success: Return calculated column width; @extended = number of decimal digits
+;                  Failure
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-20
+; Remarks .......: every array element is converted into a string type
+; Example .......: Yes
+;                  Local $aArray[] = [20.65, 4.1, 9999999, 10000.2, 100.2, 'Test', 23.765]
+;                  _ArrayAlignDec($aArray)
+;                  For $sElement in $aArray
+;                  ConsoleWrite($sElement & @CRLF)
+;                  Next
+; =================================================================================================
+Func _ArrayAlignDec(ByRef $aArray, $iColumn = Default, $iDecimals = Default, $bTrailingZeros = False)
+	Local $aParts, $nN = UBound($aArray), $nMaxReal, $nMaxDec = 0, $nMaxCol, $vVal, $nReal, $nDec
 
+	; determine sizes:
+	For $i = 0 To $nN - 1
+		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
 
+		If IsFloat($vVal) Then
+			$aParts = StringSplit($vVal, ".", 3)
+			If StringLen($aParts[0]) > $nMaxReal Then $nMaxReal = StringLen($aParts[0])
+			If StringLen($aParts[1]) > $nMaxDec Then $nMaxDec = StringLen($aParts[1])
+		ElseIf IsInt($vVal) Then
+			If $nMaxReal < StringLen($vVal) Then $nMaxReal = StringLen($vVal)
+			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
+		Else
+			If $nMaxCol < StringLen($vVal) Then $nMaxCol = StringLen($vVal)
+		EndIf
+	Next
+	If ($iDecimals <> Default) And ($iDecimals < $nMaxDec) Then $nMaxDec = $iDecimals
+	If $nMaxDec > 0 And ($nMaxCol < ($nMaxReal + 1 + $nMaxDec)) Then $nMaxCol = $nMaxReal + 1 + $nMaxDec
+	If $nMaxDec > 0 And ($nMaxCol > ($nMaxReal + 1 + $nMaxDec)) Then $nMaxReal = $nMaxCol - 1 - $nMaxDec
 
+	For $i = 0 To $nN - 1
+		$vVal = ($iColumn = Default) ? $aArray[$i] : $aArray[$i][$iColumn]
 
+		If IsFloat($vVal) Then
+			$vVal = StringFormat("%" & $nMaxReal + 1 + $nMaxDec & "." & $nMaxDec & "f", $vVal)
+			If Not $bTrailingZeros Then $vVal = StringRegExpReplace($vVal, '(0(?=0*$))', ' ')
 
-; Python-like array slicing
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+
+		ElseIf IsInt($vVal) And $nMaxDec > 0 Then
+			$vVal = StringFormat("% " & $nMaxReal & "s%-" & $nMaxDec + 1 & "s", $vVal, " ")
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+		Else
+			$vVal = StringFormat("% " & $nMaxCol & "s", $vVal)
+			If $iColumn = Default Then
+				$aArray[$i] = $vVal
+			Else
+				$aArray[$i][$iColumn] = $vVal
+			EndIf
+		EndIf
+	Next
+
+	Return SetExtended($nMaxDec, $nMaxCol)
+EndFunc   ;==>_ArrayAlignDec
+
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArraySlice()
+; Description ...: python style array slicing to extract ranges, rows, columns, single values
+; Syntax ........: _ArraySlice(Const ByRef $aArray, Const $sSliceString)
+; Parameters ....: Const ByRef $aArray - 1D/2D input array to be sliced
+;                  Const $sSliceString - slice logic with basic form "[x]" or "x" for 1D-array and "[x][y]" for 2D-array where x/y could be one of these:
+;                  |start - single value/row/column
+;                  |start:end  - range definition from-to
+;                  |start:end:step - every step element in range start:end
+;                  |start/end/step are optional so to only turn order of values for example: [::-1]
+;                  |
+;                  |if start/end = negative - counting backwards from the end
+;                  |if step = negative - value order is inverted
+;                  |
+;                  |comma separated integer list - return only specific values/rows/columns
+;                  |
+;                  |single value: return scalar variable for 1D array, 1D-array with the chosen row/column for 2D-arrays - you can extract single rows or columns e.g.: [:][2] or [3][:]
+; Return values .: Success: return scalar variable / 1D-array or 2D-array
+;                  Failure: null and set error to:
+;                  |@error = 1: $aArray != 1D/2D-array
+;                  |@error = 2: invalid value in $sSliceString (first dimension group)
+;                  |@error = 3: invalid value in $sSliceString (second dimension group)
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-20
+; Example .......: Yes 
+;                  Global $aCSVRaw[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
+;                  ; return 3 specific rows and inverted column order:
+;                  $aSliced = _ArraySlice($aCSVRaw, "[1,3,4][::-1]")
+;                  _ArrayDisplay($aSliced)
+; =================================================================================================
 Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 	Local $nDims = UBound($aArray, 0), _
 			$nN1 = UBound($aArray, 1), _
@@ -373,16 +414,28 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 EndFunc   ;==>_ArraySlice
 
 
-
-
-
-
-
-;  $aTest = _ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]")
-;  $aTest = _ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]", Default, True)
-;  $aTest = _ArrayCreate("[1, '2 zwei', 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]")
-;  $aTest = _ArrayCreate("2:20:0.5", sqrt)
-;  _ArrayDisplay($aTest)
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayCreate()
+; Description ...: create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
+; Syntax ........: _ArrayCreate($sArrayDef[, $vDefault = Default[, $bArrayInArray = False]])
+; Parameters ....: $sArrayDef     - String with either a normal AutoIt-Array definition syntax
+;                  |or a "start:stop:step"-syntax like Pythons "range"-command 
+;                  $vDefault      - [optional] If $sArrayDef = range syntax: (default:Default)
+;                  |$vDefault = variant type: default value for array elements
+;                  |$vDefault = Function: firstly sequence is build as defined in $sArrayDef, then this value is passed to this function and overwrite value in the array element (see example)
+;                  $bArrayInArray - [optional] if True and $sArrayDef is a AutoIt 2D-array definition, then a array-in-array is created instead (default:False)
+; Return values .: Success: the arrayy
+;                  Failure: Null and set error to:
+;                  |@error = 1: invalid value in $sArrayDef
+;                  |@error = 2: invald value in $sArrayDef (mixed)
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-22
+; Remarks .......: useful to create arrays directly in function parameters
+; Example .......: Yes
+;                  #include <Array.au3>
+;                  _ArrayDisplay(_ArrayCreate("2:20:0.5", sqrt))
+;                  _ArrayDisplay(_ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]"))
+; =================================================================================================
 Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 	Local $aRE = StringRegExp($sArrayDef, '(?x)^\s*\[?\s*(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ):(?>(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?(?>:(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?\s*\]?\s*$', 3)
 
@@ -445,6 +498,26 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 EndFunc   ;==>_ArrayCreate
 
 
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayRangeCreate()
+; Description ...: create a sequence as 1D-array - mainly helper function for _ArrayCreate
+; Syntax ........: _ArrayRangeCreate(Const $nStart, Const $nStop, Const[ $nStep = 1, Const[ $vDefault = Default]])
+; Parameters ....: Const $nStart   - first value of sequence
+;                  Const $nStop    - max value of sequence
+;                  Const $nStep    - [optional] step between to values (default:1)
+;                  Const $vDefault - [optional] $vDefault = variant type: default value for array elements (default:Default)
+;                  |$vDefault = Function: firstly sequence is build as defined in $sArrayDef, then this value is passed to this function and overwrite value in the array element (see example)
+; Return values .: Success: the sequence as error
+;                  Failure: Null and set @error to:
+;                  |@error = 1: $nStart is not a number
+;                  |@error = 2: $nStop is not a number
+;                  |@error = 3: $nStep is not a number
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-22
+; Example .......: Yes
+;                  #include <Array.au3>
+;                  _ArrayDisplay(_ArrayRangeCreate(5,24, 2))
+; =================================================================================================
 Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDefault = Default)
 	If Not IsNumber($nStart) Then Return SetError(1, 0, Null)
 	If Not IsNumber($nStop) Then Return SetError(2, 0, Null)
@@ -461,3 +534,38 @@ Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDe
 	Return $aRange
 EndFunc   ;==>_ArrayRangeCreate
 
+
+
+#Region Helper-Functions
+
+; #FUNCTION# ======================================================================================
+; Name ..........: __stringCenter()
+; Description ...: helper function to print a string centered
+; Syntax ........: __stringCenter($sString[, $nChars = Default])
+; Parameters ....: $sString - the string to be centered. If string is surrounded by spaces and $nchars = Default, the StringLen with spaces is used as target width
+;                  $nChars  - [optional] target width - must be > than StringLen($sString) (default:Default)
+; Return values .: Success: the centered (by surrounding spaces) string
+;                  Failure: Null and set @error to
+;                  |1: $nChars invalid value; @extended = $nChars
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-20
+; Example .......: Yes
+;                  ConsoleWrite("|" & __stringCenter("test", 10) & "|" & @CRLF)
+;                  ConsoleWrite("|" & __stringCenter("     test ") & "|" & @CRLF)
+; =================================================================================================
+Func __stringCenter($sString, $nChars = Default)
+	If $nChars = Default Then
+		$nChars = StringLen($sString)
+	EndIf
+	$sString = StringStripWS($sString, 3)
+	Local $nString = StringLen($sString)
+
+	If $nChars < $nString Or $nChars < 1 Then Return SetError(1, $nChars, Null)
+
+	Return StringFormat("%" & Ceiling(($nChars - $nString) / 2) & "s%" & _
+			$nString & "s%" & _
+			Floor(($nChars - $nString) / 2) & "s", _
+			"", $sString, "")
+EndFunc   ;==>__stringCenter
+
+#endRegion
