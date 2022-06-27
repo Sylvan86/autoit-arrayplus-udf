@@ -13,6 +13,18 @@
 ;  _ArrayCreate					- create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
 ;  _ArrayRangeCreate()			- create a sequence as 1D-array - mainly helper function for _ArrayCreate
 
+; ---- manipulation and conversion ----
+;  _ArraySlice 					- python style array slicing to extract ranges, rows, columns, single values
+;  _Array1DTo2D 				- convert a 1D-array into a 2D-array and take over the values to the first row (for inverted case - extract a row from 2D-array - use _ArraySlice)
+;  _Array2dToAinA				- convert 2D-array into a array-in-array
+;  _ArrayAinATo2d				- convert array-in-array into a 2D array
+;  _Array2String				- print a 1D/2D-array to console or variable clearly arranged
+;  _ArrayAlignDec				- align a 1D-array or a column of a 2D-array at the decimal point or right aligned
+;  _ArrayMap					- apply a function to every element of a array ("map" the function)
+;  _ArrayReduce					- reduce the elements of a array to one value with an external function
+;  _ArrayFilter					- filter the elements of an array with a external function
+;  _ArrayDeleteByCondition		- delete all empty string elements or which fulfil a user-defined condition inside an array
+
 ; ---- sorting ----
 ;  _ArraySortFlexible			- sort an array with a user-defined sorting rule
 ;  _ArraySortInsertion			- sort an array with a user-defined sorting rule with the insertion-sort algorithm
@@ -26,17 +38,6 @@
 ;  _ArrayGetMax 				- determine the element with the maximum value by using a user comparison function
 ;  _ArrayGetMin					- determine the element with the minimum value by using a user comparison function
 ;  _ArrayGetNthBiggestElement	- determine the nth biggest element (e.g.: median value) in an unsorted array without sorting it (faster)
-
-; ---- manipulation and conversion ----
-;  _ArraySlice()				- python style array slicing to extract ranges, rows, columns, single values
-;  _Array2dToAinA				- convert 2D-array into a array-in-array
-;  _ArrayAinATo2d				- convert array-in-array into a 2D array
-;  _Array2String				- print a 1D/2D-array to console or variable clearly arranged
-;  _ArrayAlignDec				- align a 1D-array or a column of a 2D-array at the decimal point or right aligned
-;  _ArrayMap					- apply a function to every element of a array ("map" the function)
-;  _ArrayReduce					- reduce the elements of a array to one value with an external function
-;  _ArrayFilter					- filter the elements of an array with a external function
-;  _ArrayDeleteByCondition		- delete all empty string elements or which fulfil a user-defined condition inside an array
 ; ===============================================================================================================================
 
 #include-once
@@ -44,6 +45,7 @@
 #include <File.au3>
 
 Global Enum Step *2 $A2C_BORDERS, $A2C_ALIGNDEC, $A2C_CENTERHEADENTRIES, $A2C_FIRSTROWHEADER, $A2C_TOCONSOLE
+
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2String()
@@ -563,7 +565,43 @@ Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDe
 	Return $aRange
 EndFunc   ;==>_ArrayRangeCreate
 
+; #FUNCTION# ======================================================================================
+; Name ..........: _Array1DTo2D()
+; Description ...: convert a 1D-array into a 2D-array and take over the values to the first row
+; Syntax ........: _Array1DTo2D(ByRef $aArray, Const $nRows[, $bInPlace = True])
+; Parameters ....: ByRef $aArray - 1D input array
+;                  Const $nRows  - number of rows (size of 2nd dimension) in the target 2D-array
+;                  $bInPlace     - [optional] If True: overwrite $aArray (default:True)
+;                  |If False: return 2D-array and leav $aArray as is
+; Return values .: Success
+;                  |$bInPlace = False: True
+;                  |$bInPlace = True: the result 2D-array
+;                  Failure: Null and set @error
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-27
+; Remarks .......: for inverted case - extract a row from 2D-array - use _ArraySlice($Array, "[:][N]")
+; Example .......: Yes
+;                  Global $aArray[] = [1,2,3,4,5]
+;                  _Array1DTo2D($aArray, 3)
+;                  _ArrayDisplay($aArray)
+; =================================================================================================
+Func _Array1DTo2D(ByRef $aArray, Const $nRows, $bInPlace = True)
+	If $nRows < 1 Then Return SetError(1, $nRows, Null)
 
+	Local $nElems = UBound($aArray)
+	Local $aTmp[$nElems][$nRows]
+
+	For $i = 0 To $nElems - 1
+		$aTmp[$i][0] = $aArray[$i]
+	Next
+
+	If $bInPlace Then
+		$aArray = $aTmp
+		Return True
+	Else
+		Return $aTmp
+	EndIf
+EndFunc
 
 #Region Helper-Functions
 
