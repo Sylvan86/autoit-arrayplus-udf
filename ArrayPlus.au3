@@ -44,25 +44,26 @@
 #include <Array.au3>
 #include <File.au3>
 
-Global Enum Step *2 $A2C_BORDERS, $A2C_ALIGNDEC, $A2C_CENTERHEADENTRIES, $A2C_FIRSTROWHEADER, $A2C_TOCONSOLE
+Global Enum Step *2 $A2S_BORDERS, $A2S_ALIGNDEC, $A2S_CENTERHEADENTRIES, $A2S_FIRSTROWHEADER, $A2S_TOCONSOLE, $A2S_CHECK_ARRAY_IN_ARRAY
 
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2String()
 ; Description ...: print a 1D/2D-array to console or variable clearly arranged
-; Syntax ........: _Array2String($aArray[, $sHeader = Default[, $cSep = " | "[, $iDecimals = Default[, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES[, $cRowSep = @CRLF]]]]])
+; Syntax ........: _Array2String($aArray[, $sHeader = Default[, $cSep = " | "[, $iDecimals = Default[, $dFlags = $A2S_BORDERS + $A2S_ALIGNDEC + $A2S_CENTERHEADENTRIES[, $cRowSep = @CRLF]]]]])
 ; Parameters ....: $aArray    - 1D or 2D array to be printed
 ;                  $sHeader   - [optional] $sHeader = Default: no header to print (default:Default)
 ;                  |$sHeader = True:     first row = header values
 ;                  |$sHeader = comma separated string: header values
 ;                  $cSep      - [optional] column separater string (default:" | ")
 ;                  $iDecimals - [optional] number of decimal places to round for floating point values (default:Default)
-;                  $dFlags    - [optional] Bitmask for serveral options: (default:$A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES)
-;                  |(1) $A2C_BORDERS - print table borders
-;                  |(2) $A2C_ALIGNDEC - align numbers at the decimal point
-;                  |(4) $A2C_CENTERHEADENTRIES - header entries are centered instead of right aligned
-;                  |(8) $A2C_FIRSTROWHEADER - first row = header (concurrenct with $sHeader = True)
-;                  |(16) $A2C_TOCONSOLE - table is also printed to console
+;                  $dFlags    - [optional] Bitmask for serveral options: (default:$A2S_BORDERS + $A2S_ALIGNDEC + $A2S_CENTERHEADENTRIES)
+;                  |(1) $A2S_BORDERS - print table borders
+;                  |(2) $A2S_ALIGNDEC - align numbers at the decimal point
+;                  |(4) $A2S_CENTERHEADENTRIES - header entries are centered instead of right aligned
+;                  |(8) $A2S_FIRSTROWHEADER - first row = header (concurrenct with $sHeader = True)
+;                  |(16) $A2S_TOCONSOLE - table is also printed to console
+;                  |(32) $A2S_CHECK_ARRAY_IN_ARRAY - table is also printed to console
 ;                  $cRowSep   - [optional] row separator string (default:@CRLF)
 ; Return values .: Success: the string form of the array
 ;                  Failure
@@ -73,12 +74,27 @@ Global Enum Step *2 $A2C_BORDERS, $A2C_ALIGNDEC, $A2C_CENTERHEADENTRIES, $A2C_FI
 ;                  Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 4.1, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
 ;                  ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ; =================================================================================================
-Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2C_BORDERS + $A2C_ALIGNDEC + $A2C_CENTERHEADENTRIES, $cRowSep = @CRLF) 
-	Local $nR = UBound($aArray, 1), $nC = UBound($aArray, 2), $sOut = ""
+Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Default, $dFlags = $A2S_BORDERS + $A2S_ALIGNDEC + $A2S_CENTERHEADENTRIES, $cRowSep = @CRLF)
+	Local $nR = UBound($aArray, 1), $sOut = ""
+
+	; if option is set, then check if array is a array-in-array and convert to 2D-array
+	If BitAND($dFlags, $A2S_CHECK_ARRAY_IN_ARRAY) And UBound($aArray, 0) = 1 Then
+		; check if array is a array-in-array
+		Local $bAInA = False
+		For $i = 0 To UBound($aArray) - 1
+			If IsArray($aArray[$i]) Then 
+				$bAInA = True
+				ExitLoop
+			EndIf
+		Next
+		If $bAInA Then $aArray = _ArrayAinATo2d($aArray)
+	EndIf
+
+	Local $nC = UBound($aArray, 2)
 
 	If UBound($aArray, 0) = 1 Then ; 1D-array
 
-		If BitAND($dFlags, $A2C_ALIGNDEC) Then _ArrayAlignDec($aArray)
+		If BitAND($dFlags, $A2S_ALIGNDEC) Then _ArrayAlignDec($aArray)
 
 		For $i = 0 To UBound($aArray) - 1
 			$sOut &= $aArray[$i] & $cRowSep
@@ -87,7 +103,7 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 		Local $aSizes[$nC], $vTemp, $aTmp
 
 		; determine column widths
-		If BitAND($dFlags, $A2C_ALIGNDEC) Then
+		If BitAND($dFlags, $A2S_ALIGNDEC) Then
 			For $iC = 0 To $nC - 1
 				$aSizes[$iC] = _ArrayAlignDec($aArray, $iC, $iDecimals)
 			Next
@@ -102,8 +118,8 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 
 		If $sHeader <> Default Then ; header treatment
 			Local $aHeader
-			If (IsBool($sHeader) And $sHeader = True) Or BitAND($dFlags, $A2C_FIRSTROWHEADER) Then ; first row = header row
-				$dFlags = BitOR($dFlags, $A2C_FIRSTROWHEADER)
+			If (IsBool($sHeader) And $sHeader = True) Or BitAND($dFlags, $A2S_FIRSTROWHEADER) Then ; first row = header row
+				$dFlags = BitOR($dFlags, $A2S_FIRSTROWHEADER)
 				$aHeader = _ArraySlice($aArray, "[0][:]")
 			Else
 				$aHeader = StringRegExp($sHeader, '\h*([^,]*[^\h,])', 3)
@@ -114,7 +130,7 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 			For $iH = 0 To UBound($aHeader) - 1
 				If StringLen($aHeader[$iH]) > $aSizes[$iH] Then $aSizes[$iH] = StringLen($aHeader[$iH])
 
-				$sOut &= BitAND($dFlags, $A2C_CENTERHEADENTRIES) ? _
+				$sOut &= BitAND($dFlags, $A2S_CENTERHEADENTRIES) ? _
 						__stringCenter($aHeader[$iH], $aSizes[$iH]) & ($iH = $nC - 1 ? "" : $cSep) : _
 						StringFormat("% " & $aSizes[$iH] & "s", $aHeader[$iH]) & ($iH = $nC - 1 ? "" : $cSep)
 			Next
@@ -130,10 +146,10 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 		EndIf
 
 		;  print data
-		For $iR = (BitAND($dFlags, $A2C_FIRSTROWHEADER) ? 1 : 0) To $nR - 1
+		For $iR = (BitAND($dFlags, $A2S_FIRSTROWHEADER) ? 1 : 0) To $nR - 1
 			For $iC = 0 To $nC - 1
 
-				If BitAND($dFlags, $A2C_ALIGNDEC) Then
+				If BitAND($dFlags, $A2S_ALIGNDEC) Then
 					$sOut &= StringFormat("% " & $aSizes[$iC] & "s", $aArray[$iR][$iC]) & ($iC = $nC - 1 ? "" : $cSep)
 				Else
 					$sOut &= StringFormat("%" & $aSizes[$iC] & "s", $aArray[$iR][$iC]) & ($iC = $nC - 1 ? "" : $cSep)
@@ -143,7 +159,7 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 		Next
 
 		; lower border
-		If BitAND($dFlags, $A2C_BORDERS) Then
+		If BitAND($dFlags, $A2S_BORDERS) Then
 			Local $sBorder = ""
 			For $iC = 0 To $nC - 1
 				For $i = 1 To $aSizes[$iC] + ($iC = $nC - 1 ? 0 : StringLen($cSep))
@@ -154,7 +170,7 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 		EndIf
 	EndIf
 
-	If BitAND($dFlags, $A2C_TOCONSOLE) Then ConsoleWrite($sOut)
+	If BitAND($dFlags, $A2S_TOCONSOLE) Then ConsoleWrite($sOut)
 	Return $sOut
 
 EndFunc   ;==>_Array2String
@@ -450,7 +466,7 @@ EndFunc   ;==>_ArraySlice
 ; Description ...: create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
 ; Syntax ........: _ArrayCreate($sArrayDef[, $vDefault = Default[, $bArrayInArray = False]])
 ; Parameters ....: $sArrayDef     - String with either a normal AutoIt-Array definition syntax
-;                  |or a "start:stop:step"-syntax like Pythons "range"-command 
+;                  |or a "start:stop:step"-syntax like Pythons "range"-command
 ;                  $vDefault      - [optional] If $sArrayDef = range syntax: (default:Default)
 ;                  |$vDefault = variant type: default value for array elements
 ;                  |$vDefault = Function: firstly sequence is build as defined in $sArrayDef, then this value is passed to this function and overwrite value in the array element (see example)
@@ -601,7 +617,7 @@ Func _Array1DTo2D(ByRef $aArray, Const $nRows, $bInPlace = True)
 	Else
 		Return $aTmp
 	EndIf
-EndFunc
+EndFunc   ;==>_Array1DTo2D
 
 #Region Helper-Functions
 
@@ -635,7 +651,7 @@ Func __stringCenter($sString, $nChars = Default)
 			"", $sString, "")
 EndFunc   ;==>__stringCenter
 
-#endRegion Functions inherited from the DynArray-UDF
+#EndRegion Helper-Functions
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2dToAinA()
@@ -809,7 +825,7 @@ Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
 			If $cbFunc($aArray[$i]) Then
 				$iC += 1
 			Else
-				$aArray[$i-$iC] = $aArray[$i]
+				$aArray[$i - $iC] = $aArray[$i]
 			EndIf
 		Next
 	Else ; default: delete all empty elements
@@ -817,13 +833,13 @@ Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
 			If $aArray[$i] = "" Then
 				$iC += 1
 			Else
-				$aArray[$i-$iC] = $aArray[$i]
+				$aArray[$i - $iC] = $aArray[$i]
 			EndIf
 		Next
 	EndIf
 
 	ReDim $aArray[$N - $iC]
-EndFunc
+EndFunc   ;==>_ArrayDeleteByCondition
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayReduce
@@ -1289,11 +1305,11 @@ Func _ArraySortSelection(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
 
 	Local $k = $i_Min, _
-		  $n = $i_Max, _
-		  $iL, $iS, _
-		  $vS, $vL, $vT
+			$N = $i_Max, _
+			$iL, $iS, _
+			$vS, $vL, $vT
 
-	For $i = $n To $k Step -1
+	For $i = $N To $k Step -1
 		$iL = $k
 		$iS = $k
 
@@ -1316,12 +1332,12 @@ Func _ArraySortSelection(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 		EndIf
 
 		$A[$k] = $vS
-		$a[$i] = $vL
+		$A[$i] = $vL
 
 		$k += 1
 		If $i <= $k Then ExitLoop
 	Next
-EndFunc
+EndFunc   ;==>_ArraySortSelection
 
 
 ; #FUNCTION# ======================================================================================
@@ -1343,7 +1359,7 @@ EndFunc
 ; =================================================================================================
 Func _ArrayHeapSortBinary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 	Local $N = $iMax + 1
-	Local $k, $s, $j
+	Local $k, $S, $j
 
 	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
 
@@ -1356,33 +1372,33 @@ Func _ArrayHeapSortBinary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 		$j = $i
 		; ------------ create a binary heap for the range i-n:
 		$k = $i * 2 + 1
-		$s = $A[$i]
+		$S = $A[$i]
 		While $k < $N
 			If $k + 1 < $N And $cb_Func($A[$k], $A[$k + 1]) = -1 Then $k += 1
-			If $cb_Func($s, $A[$k]) <> -1 Then ExitLoop
+			If $cb_Func($S, $A[$k]) <> -1 Then ExitLoop
 			$A[$j] = $A[$k]
 			$j = $k
 			$k = $j * 2 + 1
 		WEnd
-		$A[$j] = $s
+		$A[$j] = $S
 	Next
 
 	For $N = $N - 1 To 0 Step -1
-		$s = $A[$N]
+		$S = $A[$N]
 		$A[$N] = $A[0]
-		$A[0] = $s
+		$A[0] = $S
 
 		; ------------ create a binary heap for the the range 0-n:
 		$j = 0
 		$k = 1
 		While $k < $N
 			If $k + 1 < $N And $cb_Func($A[$k], $A[$k + 1]) = -1 Then $k += 1
-			If $cb_Func($s, $A[$k]) <> -1 Then ExitLoop
+			If $cb_Func($S, $A[$k]) <> -1 Then ExitLoop
 			$A[$j] = $A[$k]
 			$j = $k
 			$k = $j * 2 + 1
 		WEnd
-		$A[$j] = $s
+		$A[$j] = $S
 	Next
 
 	Return True
@@ -1408,7 +1424,7 @@ EndFunc   ;==>_ArrayHeapSortBinary
 ; =================================================================================================
 Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 	Local $N = $iMax + 1
-	Local $i, $j, $s
+	Local $i, $j, $S
 	Local $k, $m, $r, $x, $y, $z
 
 	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
@@ -1422,7 +1438,7 @@ Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 		;----- Heapify($A, $i, $n) -------
 		$j = $i
 		$k = $i * 3 + 1
-		$s = $A[$j]
+		$S = $A[$j]
 
 		While $k < $N
 			$m = $k + 1
@@ -1437,19 +1453,19 @@ Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 				If $cb_Func($x, $A[$m]) = -1 Then $k = $m
 			EndIf
 
-			If $cb_Func($s, $A[$k]) <> -1 Then ExitLoop
+			If $cb_Func($S, $A[$k]) <> -1 Then ExitLoop
 			$A[$j] = $A[$k]
 			$j = $k
 			$k = $j * 3 + 1
 		WEnd
-		$A[$j] = $s
+		$A[$j] = $S
 	Next
 
 	For $N = $N - 1 To 0 Step -1
 		; swap(A, 0, i)
-		$s = $A[$N]
+		$S = $A[$N]
 		$A[$N] = $A[0]
-		$A[0] = $s
+		$A[0] = $S
 
 		;-------- Heapify($A, 0, $n) ---------
 		$i = 0
@@ -1467,18 +1483,18 @@ Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 				If $cb_Func($x, $A[$m]) = -1 Then $k = $m
 			EndIf
 
-			If $cb_Func($s, $A[$k]) <> -1 Then ExitLoop
+			If $cb_Func($S, $A[$k]) <> -1 Then ExitLoop
 			$A[$i] = $A[$k]
 			$i = $k
 			$k = $i * 3 + 1
 		WEnd
-		$A[$i] = $s
+		$A[$i] = $S
 	Next
 EndFunc   ;==>_ArrayHeapSortTernary
 
-#endRegion
+#EndRegion
 
-#region Helper functions from Dynarray-UDF
+#Region Helper functions from Dynarray-UDF
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: __cb_NormalComparison
@@ -2213,4 +2229,4 @@ Func ___5Sort(Const $f, ByRef $A)
 	EndIf
 EndFunc   ;==>___5Sort
 
-#endRegion
+#EndRegion Helper functions from Dynarray-UDF
