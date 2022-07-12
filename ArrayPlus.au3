@@ -1,6 +1,6 @@
 ; #INDEX# =======================================================================================================================
 ; Title .........: ArrayPlus-UDF
-; Version .......: 0.1
+; Version .......: 0.2
 ; AutoIt Version : 3.3.16.0
 ; Language ......: english (german maybe by accident)
 ; Description ...: advanced helpers for array handling
