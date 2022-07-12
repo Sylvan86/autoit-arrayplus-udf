@@ -6,6 +6,7 @@
 ; Description ...: advanced helpers for array handling
 ; Author(s) .....: AspirinJunkie
 ; Last changed ..: 2022-06-22
+; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
 ; ===============================================================================================================================
 
 ; #Function list# =======================================================================================================================
@@ -24,6 +25,7 @@
 ;  _ArrayReduce					- reduce the elements of a array to one value with an external function
 ;  _ArrayFilter					- filter the elements of an array with a external function
 ;  _ArrayDeleteByCondition		- delete all empty string elements or which fulfil a user-defined condition inside an array
+;  _ArrayDeleteMultiValues()    - removes elements that appear more than once in the string. (not only the duplicates)
 
 ; ---- sorting ----
 ;  _ArraySortFlexible			- sort an array with a user-defined sorting rule
@@ -37,6 +39,7 @@
 ;  _ArrayBinarySearchFlex 		- performs a binary search for an appropriately sorted array using an individual comparison function
 ;  _ArrayGetMax 				- determine the element with the maximum value by using a user comparison function
 ;  _ArrayGetMin					- determine the element with the minimum value by using a user comparison function
+;  _ArrayMinMax                 - returns min and max value and their indices of a 1D array or all/specific column of a 2D array
 ;  _ArrayGetNthBiggestElement	- determine the nth biggest element (e.g.: median value) in an unsorted array without sorting it (faster)
 ; ===============================================================================================================================
 
@@ -478,7 +481,7 @@ EndFunc   ;==>_ArraySlice
 ;                  |@error = 1: invalid value in $sArrayDef
 ;                  |@error = 2: invald value in $sArrayDef (mixed)
 ; Author ........: aspirinjunkie
-; Modified ......: 2022-06-22
+; Modified ......: 2022-07-12
 ; Remarks .......: useful to create arrays directly in function parameters
 ; Example .......: Yes
 ;                  _ArrayDisplay(_ArrayCreate("2:20:0.5", sqrt))
@@ -854,6 +857,43 @@ Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
 EndFunc   ;==>_ArrayDeleteByCondition
 
 ; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayDeleteMultiValues()
+; Description ...: Removes elements that appear more than once in the string. (not only the duplicates)
+; Syntax ........: _ArrayDeleteMultiValues(ByRef $aArray)
+; Parameters ....: ByRef $aArray - the 1D-array
+; Return values .: Success: 1D array, cleaned by the elements which appear several times in the string
+;                  Failure: Null and set @error to:
+;                  |@error = 1: $aArray != 1D-array
+; Author ........: aspirinjunkie
+; Modified ......: 2022-07-12
+; Example .......: Yes
+;                  Global $a_Array[] = ["Name1", "Name2", "Name3", "Name2", "Name3", "Name4", "Name2"]
+;                  $aFiltered = _ArrayDeleteMultiValues($a_Array)
+;                  _ArrayDisplay($aFiltered)
+; =================================================================================================
+Func _ArrayDeleteMultiValues(ByRef $aArray)
+	Local $mCount[]
+
+	If UBound($aArray, 0) <> 1 Then Return SetError(1, UBound($aArray, 0), Null)
+
+	For $i In $aArray
+		$mCount[$i] += 1
+	Next
+
+	Local $iR = 0, $aRet[UBound($aArray)]
+	For $i In $aArray
+		If $mCount[$i] = 1 Then
+			$aRet[$iR] = $i
+			$iR += 1
+		EndIf
+	Next
+
+	ReDim $aRet[$iR]
+	Return $aRet
+EndFunc   ;==>_ArrayDeleteDuplicates
+
+
+; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayReduce
 ; Description ...: reduce the elements of a array to one value with an external function
 ; Syntax ........: _ArrayReduce(ByRef Const $a_Array, Const $cb_Func, Const $b_Withcount = False, $d_EndIndex = Default)
@@ -970,6 +1010,146 @@ Func _ArrayGetMin(ByRef $a_A, Const $cb_Func = Default, Const $d_Start = 0, Cons
 	Return $a_Min
 EndFunc   ;==>_ArrayGetMin
 
+
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayMinMax()
+; Description ...: Returns min and max value and their indices of a 1D array or all/specific column of a 2D array
+; Syntax ........: _ArrayMinMax(ByRef $aArray[, $iColumn = Default[, $cbFunc = Default]])
+; Parameters ....: ByRef $aArray - the array (1D or 2D)
+;                  $iColumn      - [optional] If 2D-array: the column whose min/max values are to be determined. (default:Default)
+;                  |If Default and $aArray = 2D-array: Min/Max-values/indices for every column
+;                  $cbFunc      - [optional] function variable points to a function of a form "[1|0|-1] function(value, value)" (default:Default)
+;                  |the function compares two values a,and b for a>b/a=b/a<b
+;                  |an example is the AutoIt-Function "StringCompare".
+; Return values .: Success: min/max values and their indices
+;                  |For 1D-array or 2D-Array with $icolumn set: return 1D-Array: [<min val>, <max val>, <min index>, <max index>]
+;                  |For 2D-Array and $iColumn = Default: return 2D-Array: [[<min val n>, <max val n>, <min index n>, <max index n>], ...]
+;                  Failure: return Null and set @error:
+;                  |@error = 1: $aArray != 1D/2D-Array
+;                  |@error = 2: invalid value for $cbFunc
+;                  |@error = 3: invalid value for $iColumn
+; Author ........: aspirinjunkie
+; Modified ......: 2022-07-12
+; Example .......: Yes
+;                  Global $aArray1D[30]
+;                  For $i = 0 To 29
+;                      $aArray1D[$i] = Random(1, 1000, 1)
+;                  Next
+;                  _ArrayDisplay($aArray1D)
+;                  $aMinMax = _ArrayMinMax($aArray1D)
+;                  _ArrayDisplay($aMinMax)
+; =================================================================================================
+Func _ArrayMinMax(ByRef $aArray, $iColumn = Default, $cbFunc = Default)
+	Local Enum $eMin, $eMax, $eMinInd, $eMaxInd
+
+	If $cbFunc <> Default And (Not IsFunc($cbFunc)) Then Return SetError(2, 0, Null)
+
+	Switch UBound($aArray, 0)
+		Case 1
+			Local $aRet[4]
+			$aRet[$eMin] = $aArray[0]
+			$aRet[$eMax] = $aArray[0]
+			$aRet[$eMinInd] = 0
+			$aRet[$eMaxInd] = 0
+
+			If $cbFunc = Default Then
+				For $i = 1 To UBound($aArray) - 1
+					If $aArray[$i] < $aRet[$eMin] Then
+						$aRet[$eMin] = $aArray[$i]
+						$aRet[$eMinInd] = $i
+					ElseIf $aArray[$i] > $aRet[$eMax] Then
+						$aRet[$eMax] = $aArray[$i]
+						$aRet[$eMaxInd] = $i
+					EndIf
+				Next
+			Else ; user defined comparison function
+				For $i = 1 To UBound($aArray) - 1
+					If $cbFunc($aArray[$i], $aRet[$eMin]) = -1 Then
+						$aRet[$eMin] = $aArray[$i]
+						$aRet[$eMinInd] = $i
+					ElseIf $cbFunc($aArray[$i], $aRet[$eMax]) = 1 Then
+						$aRet[$eMax] = $aArray[$i]
+						$aRet[$eMaxInd] = $i
+					EndIf
+				Next
+			EndIf
+
+			Return $aRet
+		Case 2
+			Local $nR = UBound($aArray), $nC = UBound($aArray, 2)
+
+			If $iColumn = Default Then
+				Local $aRet[4][$nC]
+
+				For $i = 0 To $nC - 1
+					$aRet[$eMin][$i] = $aArray[0][$i]
+					$aRet[$eMax][$i] = $aArray[0][$i]
+					$aRet[$eMinInd][$i] = 0
+					$aRet[$eMaxInd][$i] = 0
+				Next
+
+				If $cbFunc = Default Then ; normal comparison
+					For $i = 1 To $nR - 1
+						For $j = 0 To $nC - 1
+							If $aArray[$i][$j] < $aRet[$eMin][$j] Then
+								$aRet[$eMin][$j] = $aArray[$i][$j]
+								$aRet[$eMinInd][$j] = $i
+							ElseIf $aArray[$i][$j] > $aRet[$eMax][$j] Then
+								$aRet[$eMax][$j] = $aArray[$i][$j]
+								$aRet[$eMaxInd][$j] = $i
+							EndIf
+						Next
+					Next
+				Else ; user defined comparison
+					For $i = 1 To $nR - 1
+						For $j = 0 To $nC - 1
+							If $cbFunc($aArray[$i][$j], $aRet[$eMin][$j]) = -1 Then
+								$aRet[$eMin][$j] = $aArray[$i][$j]
+								$aRet[$eMinInd][$j] = $i
+							ElseIf $cbFunc($aArray[$i][$j], $aRet[$eMax][$j]) = 1 Then
+								$aRet[$eMax][$j] = $aArray[$i][$j]
+								$aRet[$eMaxInd][$j] = $i
+							EndIf
+						Next
+					Next
+				EndIf
+			Else
+				If $iColumn > $nC Then Return SetError(3, $iColumn, Null)
+				Local $aRet[4]
+				$aRet[$eMin] = $aArray[0][$iColumn]
+				$aRet[$eMax] = $aArray[0][$iColumn]
+				$aRet[$eMinInd] = 0
+				$aRet[$eMaxInd] = 0
+
+				If $cbFunc = Default Then ; normal comparison
+					For $i = 1 To $nR - 1
+						If $aArray[$i][$iColumn] < $aRet[$eMin] Then
+							$aRet[$eMin] = $aArray[$i][$iColumn]
+							$aRet[$eMinInd] = $i
+						ElseIf $aArray[$i][$iColumn] > $aRet[$eMax] Then
+							$aRet[$eMax] = $aArray[$i][$iColumn]
+							$aRet[$eMaxInd] = $i
+						EndIf
+					Next
+				Else ; user defined comparison
+					For $i = 1 To $nR - 1
+						If $cbFunc($aArray[$i][$iColumn], $aRet[$eMin]) = -1 Then
+							$aRet[$eMin] = $aArray[$i][$iColumn]
+							$aRet[$eMinInd] = $i
+						ElseIf $cbFunc($aArray[$i][$iColumn] > $aRet[$eMax]) = 1 Then
+							$aRet[$eMax] = $aArray[$i][$iColumn]
+							$aRet[$eMaxInd] = $i
+						EndIf
+					Next
+				EndIf
+			EndIf
+
+			Return $aRet
+		Case Else
+			Return SetError(1, UBound($aArray, 0), Null)
+
+	EndSwitch
+EndFunc   ;==>_ArrayMinMax
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayGetNthBiggestElement

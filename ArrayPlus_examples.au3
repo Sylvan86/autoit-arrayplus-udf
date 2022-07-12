@@ -167,232 +167,25 @@
 #EndRegion _ArrayReduce()
 
 
+#Region _ArrayMinMax()()
+; example 1 - 1D-Array
+;  Global $aArray1D[30]
+;  For $i = 0 To 29
+;  	$aArray1D[$i] = Random(1, 1000, 1)
+;  Next
+;  _ArrayDisplay($aArray1D)
+;  $aMinMax = _ArrayMinMax($aArray1D)
+;  _ArrayDisplay($aMinMax)
 
-;  ;  create 2D-Array
-;  Global Const $N = 15, $M = 5
+; example 2 - process all columns of 2D-Array
+;  Global $N = 15, $M = 5
 ;  Global $aArray2D[$N][$M]
 ;  For $i = 0 To $N - 1
 ;  	For $j = 0 To $M - 1
 ;  		$aArray2D[$i][$j] = Random(1, 100, 1) * 10 ^ $j
 ;  	Next
 ;  Next
-;  _ArrayMinMax($aArray2D)
-
-
-
-;  ; create 1D-Array
-;  Global Const $N = 30, $M = 5
-;  Global $aArray1D[$N]
-;  For $i = 0 To $N -1
-;  	$aArray1D[$i] = Random(1,1000, 1)
-;  Next
-;  _ArrayMinMax($aArray1D)
-
-
-
-Func _ArrayMinMax(ByRef $aArray, $iColumn = Default)
-	Local Enum $eMin, $eMax, $eMinInd, $eMaxInd
-
-	Switch UBound($aArray, 0)
-		Case 1
-			Local $aRet[4]
-			$aRet[$eMin] = $aArray[0]
-			$aRet[$eMax] = $aArray[0]
-			$aRet[$eMinInd] = 0
-			$aRet[$eMaxInd] = 0
-
-			For $i = 1 To UBound($aArray) - 1
-				If $aArray[$i] < $aRet[$eMin] Then
-					$aRet[$eMin] = $aArray[$i]
-					$aRet[$eMinInd] = $i
-				ElseIf $aArray[$i] > $aRet[$eMax] Then
-					$aRet[$eMax] = $aArray[$i]
-					$aRet[$eMaxInd] = $i
-				EndIf
-			Next
-			Return $aRet
-		Case 2
-			Local $nR = UBound($aArray), $nC = UBound($aArray, 2)
-
-			If $iColumn = Default Then
-				Local $aRet[4][$nC]
-
-				For $i = 0 To $nC - 1
-					$aRet[$eMin][$i] = $aArray[0][$i]
-					$aRet[$eMax][$i] = $aArray[0][$i]
-					$aRet[$eMinInd][$i] = 0
-					$aRet[$eMaxInd][$i] = 0
-				Next
-
-				For $i = 1 To $nR - 1
-					For $j = 0 To $nC - 1
-						If $aArray[$i][$j] < $aRet[$eMin][$j] Then
-							$aRet[$eMin][$j] = $aArray[$i][$j]
-							$aRet[$eMinInd][$j] = $i
-						ElseIf $aArray[$i][$j] > $aRet[$eMax][$j] Then
-							$aRet[$eMax][$j] = $aArray[$i][$j]
-							$aRet[$eMaxInd][$j] = $i
-						EndIf
-					Next
-				Next
-			Else
-				If $iColumn > $nC Then Return SetError(1, $iColumn, Null)
-				Local $aRet[4]
-				$aRet[$eMin] = $aArray[0][$iColumn]
-				$aRet[$eMax] = $aArray[0][$iColumn]
-				$aRet[$eMinInd] = 0
-				$aRet[$eMaxInd] = 0
-
-				For $i = 1 To $nR - 1
-					If $aArray[$i][$iColumn] < $aRet[$eMin] Then
-						$aRet[$eMin] = $aArray[$i][$iColumn]
-						$aRet[$eMinInd] = $i
-					ElseIf $aArray[$i][$iColumn] > $aRet[$eMax] Then
-						$aRet[$eMax] = $aArray[$i][$iColumn]
-						$aRet[$eMaxInd] = $i
-					EndIf
-				Next
-			EndIf
-
-			_ArrayDisplay($aRet)
-			Return $aRet
-		Case Else
-			Return SetError(1, UBound($aArray, 0), Null)
-
-	EndSwitch
-EndFunc   ;==>_ArrayMinMax
-
-
-
-
-
-
-;  ; Gibt den Inhalt einer Variablen auf der Kommandozeile aus - egal ob Skalar, Array, Map, Dictionary, Struct etc.
-;  Func _var2console(ByRef $vVar, Const $vAdditionalInfo = Default, Const $sSuffix = @CRLF)
-;  	If IsArray($vVar) Then
-;  		;  Noch unterscheiden ob Array-In-Array
-;  		ConsoleWrite(_Array2String($vVar))
-;  	EndIf
-;  	If IsMap($vVar) Then
-;  		;  Unterscheiden ob Integer oder String-Map
-;  	EndIf
-;  	If ObjName($vVar) == "Scripting.Dictionary" Then
-;  	If IsDllStruct($vVar) Then ; hier die Struct-Definition aus $vAdditionalInfo verwenden
-;  	If IsFunc($vVar) Then FuncName($vVar)
-;  	If IsObj($vVar) Then ObjName,
-;  	;  Oder:
-;  	Switch VarGetType($vVar)
-
-;  EndFunc
-
-
-;  Func _ArrayMinMax()
-
-;  EndFunc
-
-
-
-;  Global $a_Array[] = ["Name1", "Name2", "Name3", "Name2", "Name3", "Name4", "Name2"]
-
-
-;  Global $a_Max = _ArrayModalwert($a_Array, 1)
-;  _ArrayDisplay($a_Max, "Elemente mit maximalen Vorkommen")
-
-
-; #FUNCTION# ======================================================================================
-; Name ..........: _ArrayModalwert()
-; Description ...: Bestimmt den Modalwert in einem Array
-; Syntax ........: _ArrayModalwert(ByRef $a_Inp, Const[ $i_Start = 0, Const[ $s_Delim = "|"]])
-; Parameters ....: ByRef $a_Inp - 1D-Array mit Stichprobenmenge
-; Const $i_Start - [optional] Start Array-Index; gewöhnlich auf 0 oder 1 gesetzt (Standard = 0) (default:0)
-; Const $s_Delim - [optional] Wenn "|" in den einzelnen Elementen vorkommt: ändern (default:"|")
-; Return values .: Success: Array[0]: Anzahl an Vorkommen, Array[1..n]: häufigst vorgekommene Elemente
-; Failure: Return 0 und setzt @error
-; =================================================================================================
-Func _ArrayModalwert(ByRef $a_Inp, Const $i_Start = 0, Const $s_Delim = "|")
-	Local $o_Dict = ObjCreate("Scripting.Dictionary")
-	Local $i_CMax = 1, $i_C, $s_Mods
-	; Array durchgehen und Vorkommen von Werten zählen:
-	If Not IsArray($a_Inp) Then Return SetError(1, 0, 0)
-	For $x = $i_Start To UBound($a_Inp) - 1
-		$o_Dict($a_Inp[$x]) += 1
-	Next
-	; Werte mit maximalen Vorkommen ermitteln:
-	For $i In $o_Dict.Keys
-		$i_C = $o_Dict($i)
-		If $i_C = $i_CMax Then
-			$s_Mods &= $i & $s_Delim
-		ElseIf $i_C > $i_CMax Then
-			$i_CMax = $i_C
-			$s_Mods = $i & $s_Delim
-		EndIf
-	Next
-	Local $a_Return = StringSplit(StringTrimRight($s_Mods, 1), $s_Delim)
-	$a_Return[0] = $i_CMax
-	Return $a_Return
-EndFunc   ;==>_ArrayModalwert
-
-; löscht Elemente, welche mehrmals vorkommen
-Func _ArrayDeleteDuplicates(ByRef $aArray)
-	Local $oCount = ObjCreate("Scripting.Dictionary")
-	
-	For $i In $aArray
-		$oCount($i) += 1
-	Next
-	
-	Local $iR = 0, $aRet[UBound($aArray)]
-	For $i In $aArray
-		If $oCount($i) = 1 Then
-			$aRet[$iR] = $i
-			$iR += 1
-		EndIf
-	Next
-	
-	ReDim $aRet[$iR]
-	Return $aRet
-EndFunc   ;==>_ArrayDeleteDuplicates
-
-
-
-
-
-
-
-;  ;  Global $s_String = BinaryToString(InetRead("https://pastebin.com/raw/w3SgtP9Q"))
-
-;  $sString = FileRead("C:\Users\at2\Documents\Programmierung\AutoIt\Test\Test.sv")
-;  $a_Splitted = _StringSplit2D($sString)
-
-;  $a_Splitted[2][8] *= -1
-;  $a_Splitted[5][7] *= -1
-
-;  For $i = 1 TO UBound($a_Splitted) - 1
-;  	$a_Splitted[$i][2] = Number($a_Splitted[$i][2])
-;  	$a_Splitted[$i][3] = StringStripWS($a_Splitted[$i][3], 3)
-;  	$a_Splitted[$i][7] = Number($a_Splitted[$i][7])
-;  	$a_Splitted[$i][8] = Number($a_Splitted[$i][8])
-;  Next
-;  ;  _ArrayDisplay($a_Splitted)
-;  ConsoleWrite(_Array2String($a_Splitted, True, " | ", 3))
-
-;  Func _StringSplit2D(ByRef $sString, $sDelim = @CRLF, $sDelim2 = ",", $i_Start = 0)
-;  	Local $a_FirstDim = StringSplit($sString, $sDelim, 3)
-;  	Local $a_Out[UBound($a_FirstDim)][1]
-;  	Local $a_Line, $i_2DMax = 1
-
-
-;  	For $i = $i_Start To UBound($a_FirstDim) - 1
-;  		$a_Line = StringSplit($a_FirstDim[$i], $sDelim2, 3)
-;  		If UBound($a_Line) > $i_2DMax Then
-;  			$i_2DMax = UBound($a_Line)
-;  			ReDim $a_Out[UBound($a_Out)][$i_2DMax]
-;  		EndIf
-;  		For $j = 0 To UBound($a_Line) - 1
-;  			$a_Out[$i][$j] = $a_Line[$j]
-;  		Next
-;  	Next
-;   	Return $a_Out
-;  EndFunc
-
-
-
+;  _ArrayDisplay($aArray2D)
+;  $aMinMax = _ArrayMinMax($aArray2D)
+;  _ArrayDisplay($aMinMax)
+#endRegion
