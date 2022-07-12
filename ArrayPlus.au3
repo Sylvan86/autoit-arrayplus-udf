@@ -460,13 +460,15 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 	EndSwitch
 EndFunc   ;==>_ArraySlice
 
-
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayCreate()
 ; Description ...: create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
 ; Syntax ........: _ArrayCreate($sArrayDef[, $vDefault = Default[, $bArrayInArray = False]])
 ; Parameters ....: $sArrayDef     - String with either a normal AutoIt-Array definition syntax
 ;                  |or a "start:stop:step"-syntax like Pythons "range"-command
+;                  |border chars: "[" for inclusive borders and "(" for exclusive borders - example: "(0:4]" --> [1,2,3,4];     "[0:4)" --> [0,1,2,3]
+;                  |no border char defaults to inclusive border
+;                  |step size delimiter can be ":" for a step size and "|" for the number of steps - example "1:5:2" --> [1,3,5];   "1:5|3" --> [1,3,5]
 ;                  $vDefault      - [optional] If $sArrayDef = range syntax: (default:Default)
 ;                  |$vDefault = variant type: default value for array elements
 ;                  |$vDefault = Function: firstly sequence is build as defined in $sArrayDef, then this value is passed to this function and overwrite value in the array element (see example)
@@ -479,12 +481,11 @@ EndFunc   ;==>_ArraySlice
 ; Modified ......: 2022-06-22
 ; Remarks .......: useful to create arrays directly in function parameters
 ; Example .......: Yes
-;                  #include <Array.au3>
 ;                  _ArrayDisplay(_ArrayCreate("2:20:0.5", sqrt))
 ;                  _ArrayDisplay(_ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]"))
 ; =================================================================================================
 Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
-	Local $aRE = StringRegExp($sArrayDef, '(?x)^\s*\[?\s*(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ):(?>(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?(?>:(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?\s*\]?\s*$', 3)
+	Local $aRE = StringRegExp($sArrayDef, '(?x)^\s*[\[\(]?\s*(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ):(?>(\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?(?>[:\|](\-? (?:0|[1-9]\d*) (?:\.\d+)? (?:[eE][-+]?\d+)? | ))?\s*[\]\)]?\s*$', 3)
 
 	If Not @error Then ; Array-range
 		Local $nRE = UBound($aRE)
@@ -492,6 +493,17 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 		Local $iStart = ($nRE < 1 Or $aRE[0] == "") ? 0 : Number($aRE[0])
 		Local $iStop = ($nRE < 2 Or $aRE[1] == "") ? 0 : Number($aRE[1])
 		Local $iStep = ($nRE < 3 Or $aRE[2] == "") ? 1 : Number($aRE[2])
+
+		If StringInStr($sArrayDef, "|", 1) Then ; number of steps instead of step size
+			Local $nSteps = $iStep
+			If Not StringIsDigit($nSteps) Or $nSteps < 1 Then Return SetError(3, $nSteps, Null)
+
+			$iStep = ($iStop - $iStart) / ($nSteps - 1 + (StringInStr($sArrayDef, "(", 1) ? 1 : 0) + (StringInStr($sArrayDef, ")", 1) ? 1 : 0))
+		EndIf
+
+		; handle exclusive range borders 
+		If StringInStr($sArrayDef, "(", 1) Then $iStart += $iStep
+		If StringInStr($sArrayDef, ")", 1) Then $iStop -= $iStep
 
 		Return _ArrayRangeCreate($iStart, $iStop, $iStep, $vDefault)
 	Else
