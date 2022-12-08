@@ -1,7 +1,18 @@
 #include "ArrayPlus.au3"
 
+
+
+
+Global $aArray[] = [1,2,3,4,5]
+_Array1DTo2D($aArray, 3)
+_ArrayDisplay($aArray)
+
+
+
+
+
 #Region _ArrayCreate()
-;  ;  example 1 - create 2D array inline with standard AutoIt-syntax
+;  example 1 - create 2D array inline with standard AutoIt-syntax
 ;  _ArrayDisplay(_ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]"))
 
 ;  ;  example 2 - create array-in-array inline with standard AutoIt-syntax but
@@ -28,8 +39,8 @@
 #EndRegion _ArrayCreate()
 
 #Region _ArraySlice()
-;  Global $aExample1D = _ArrayRangeCreate(1, 20)
-;  Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
+Global $aExample1D = _ArrayRangeCreate(1, 20)
+Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
 
 ;  ; example 1 - extract specific range from 1D-array
 ;  $aSliced = _ArraySlice($aExample1D, "5:15")
@@ -43,8 +54,8 @@
 ;  $aSliced = _ArraySlice($aExample1D, "::-1")
 ;  _ArrayDisplay($aSliced, "example 3")
 
-;  ;  example 4 - extract row #2 as 1D-Array
-;  $aSliced = _ArraySlice($aExample2D, "[1][:]")
+;  example 4 - extract row #2 as 1D-Array
+;  $aSliced = _ArraySlice($aExample2D, "[:]")
 ;  _ArrayDisplay($aSliced, "example 4")
 
 ;  ;  example 5 - extract last row as 1D-Array

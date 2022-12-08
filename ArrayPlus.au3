@@ -9,6 +9,15 @@
 ; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
 ; ===============================================================================================================================
 
+
+;  ############# TODO ####################
+;  Bei cbFunc anstatt einer Funktion einen String ermöglichen.
+;  So muss für kleine Sachen nicht immer eine komplette Funktion geschrieben werden.
+;  #######################################
+
+
+
+
 ; #Function list# =======================================================================================================================
 ; ---- creation ------
 ;  _ArrayCreate					- create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
@@ -16,7 +25,7 @@
 
 ; ---- manipulation and conversion ----
 ;  _ArraySlice 					- python style array slicing to extract ranges, rows, columns, single values
-;  _Array1DTo2D 				- convert a 1D-array into a 2D-array and take over the values to the first row (for inverted case - extract a row from 2D-array - use _ArraySlice)
+;  _Array1DTo2D 				- convert a 1D-array into a 2D-array and take over the values to the first column (for inverted case - extract a row column 2D-array - use _ArraySlice)
 ;  _Array2dToAinA				- convert 2D-array into a array-in-array
 ;  _ArrayAinATo2d				- convert array-in-array into a 2D array
 ;  _Array2String				- print a 1D/2D-array to console or variable clearly arranged
@@ -359,7 +368,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 					$aRet[$iC] = $aArray[$i]
 					$iC += 1
 				Next
-				Return $aRet
+				Return SetExtended(UBound($aRet), $aRet)
 			Else
 				Local $aRet[$iN1], $iC = 0
 
@@ -367,7 +376,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 					$aRet[$iC] = $aArray[$i]
 					$iC += 1
 				Next
-				Return $aRet
+				Return SetExtended($iN1, $aRet)
 			EndIf
 
 		Case 2 ; 2D-Array
@@ -382,7 +391,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 						$aRet[$iC] = $aArray[$iStart1][$i]
 						$iC += 1
 					Next
-					Return $aRet
+					Return SetExtended($iN2, $aRet)
 
 				Case IsKeyword($iStop2) = 2    ; a single column
 					If IsArray($aIndices1) Then ; case for list of indices in first dim
@@ -391,14 +400,14 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 							$aRet[$iC] = $aArray[$iIndex1][$iStart2]
 							$iC += 1
 						Next
-						Return $aRet
+						Return SetExtended(UBound($aRet), $aRet)
 					Else ; case for array range in first dim
 						Local $aRet[$iN1], $iC = 0
 						For $i = $iStart1 To $iStop1 Step $iStep1
 							$aRet[$iC] = $aArray[$i][$iStart2]
 							$iC += 1
 						Next
-						Return $aRet
+						Return SetExtended($iN1, $aRet)
 					EndIf
 
 				Case Else ; normal 2D slice
@@ -415,7 +424,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 								Next
 								$iR += 1
 							Next
-							Return $aRet
+							Return SetExtended(UBound($aRet), $aRet)
 
 							;  index list in dimension 1
 						Case IsArray($aIndices1)
@@ -429,7 +438,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 
 								$iR += 1
 							Next
-							Return $aRet
+							Return SetExtended(UBound($aRet), $aRet)
 
 							;  index list in dimension 2
 						Case IsArray($aIndices2)
@@ -442,7 +451,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 								Next
 								$iR += 1
 							Next
-							Return $aRet
+							Return SetExtended($iN1, $aRet)
 
 							; range definition only
 						Case Else
@@ -457,7 +466,7 @@ Func _ArraySlice(Const ByRef $aArray, Const $sSliceString)
 
 								$iR += 1
 							Next
-							Return $aRet
+							Return SetExtended($iN1, $aRet)
 					EndSelect
 			EndSelect
 	EndSwitch
@@ -542,7 +551,7 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 				Next
 			Next
 
-			Return $aRet
+			Return SetExtended(UBound($aRet), $aRet)
 		Else ; 1D-Array or array-in-array
 			Local $aRet[UBound($aVals)]
 
@@ -553,7 +562,7 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 					$aRet[$i] = Execute($aVals[$i])
 				EndIf
 			Next
-			Return $aRet
+			Return SetExtended(UBound($aRet), $aRet)
 		EndIf
 
 	EndIf
@@ -593,34 +602,34 @@ Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDe
 		$nCurrent += $nStep
 		$aRange[$i] = $vDefault = Default ? $nCurrent : (IsFunc($vDefault) ? $vDefault($nCurrent) : $vDefault)
 	Next
-	Return $aRange
+	Return SetExtended($iN, $aRange)
 EndFunc   ;==>_ArrayRangeCreate
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array1DTo2D()
-; Description ...: convert a 1D-array into a 2D-array and take over the values to the first row
-; Syntax ........: _Array1DTo2D(ByRef $aArray, Const $nRows[, $bInPlace = True])
+; Description ...: convert a 1D-array into a 2D-array and take over the values to the first column
+; Syntax ........: _Array1DTo2D(ByRef $aArray, Const $nCols[, $bInPlace = True])
 ; Parameters ....: ByRef $aArray - 1D input array
-;                  Const $nRows  - number of rows (size of 2nd dimension) in the target 2D-array
+;                  Const $nCols  - number of columns (size of 2nd dimension) in the target 2D-array
 ;                  $bInPlace     - [optional] If True: overwrite $aArray (default:True)
-;                  |If False: return 2D-array and leav $aArray as is
+;                  |If False: return 2D-array and leave $aArray as is
 ; Return values .: Success
 ;                  |$bInPlace = False: True
 ;                  |$bInPlace = True: the result 2D-array
 ;                  Failure: Null and set @error
 ; Author ........: aspirinjunkie
 ; Modified ......: 2022-06-27
-; Remarks .......: for inverted case - extract a row from 2D-array - use _ArraySlice($Array, "[:][N]")
+; Remarks .......: for inverted case - extract a column from 2D-array - use _ArraySlice($Array, "[:][N]")
 ; Example .......: Yes
 ;                  Global $aArray[] = [1,2,3,4,5]
 ;                  _Array1DTo2D($aArray, 3)
 ;                  _ArrayDisplay($aArray)
 ; =================================================================================================
-Func _Array1DTo2D(ByRef $aArray, Const $nRows, $bInPlace = True)
-	If $nRows < 1 Then Return SetError(1, $nRows, Null)
+Func _Array1DTo2D(ByRef $aArray, Const $nCols, $bInPlace = True)
+	If $nCols < 1 Then Return SetError(1, $nCols, Null)
 
 	Local $nElems = UBound($aArray)
-	Local $aTmp[$nElems][$nRows]
+	Local $aTmp[$nElems][$nCols]
 
 	For $i = 0 To $nElems - 1
 		$aTmp[$i][0] = $aArray[$i]
@@ -628,9 +637,9 @@ Func _Array1DTo2D(ByRef $aArray, Const $nRows, $bInPlace = True)
 
 	If $bInPlace Then
 		$aArray = $aTmp
-		Return True
+		Return SetExtended($nElems, True)
 	Else
-		Return $aTmp
+		Return SetExtended($nElems, $aTmp)
 	EndIf
 EndFunc   ;==>_Array1DTo2D
 
@@ -690,7 +699,7 @@ Func _Array2dToAinA(ByRef $A)
 		Next
 		$a_Ret[$i] = $t
 	Next
-	Return $a_Ret
+	Return SetExtended($N, $a_Ret)
 EndFunc   ;==>_Array2dToAinA
 
 ; #FUNCTION# ======================================================================================
@@ -699,18 +708,18 @@ EndFunc   ;==>_Array2dToAinA
 ; Syntax ........: _ArrayAinATo2d(ByRef $A)
 ; Parameters ....: $A             - the arrays in array which should be converted
 ; Return values .: Success: a 2D Array build from the input array
-;                  Failure: False
+;                  Failure: Null
 ;                     @error = 1: $A is'nt an 1D array
 ;                            = 2: $A is empty
 ;                            = 3: first element isn't a array
 ; Author ........: AspirinJunkie
 ; =================================================================================================
 Func _ArrayAinATo2d(ByRef $A)
-	If UBound($A, 0) <> 1 Then Return SetError(1, UBound($A, 0), False)
+	If UBound($A, 0) <> 1 Then Return SetError(1, UBound($A, 0), Null)
 	Local $N = UBound($A)
-	If $N < 1 Then Return SetError(2, $N, False)
+	If $N < 1 Then Return SetError(2, $N, Null)
 	Local $u = UBound($A[0])
-	If $u < 1 Then Return SetError(3, $u, False)
+	If $u < 1 Then Return SetError(3, $u, Null)
 
 	Local $a_Ret[$N][$u]
 
@@ -721,7 +730,7 @@ Func _ArrayAinATo2d(ByRef $A)
 			$a_Ret[$i][$j] = $t[$j]
 		Next
 	Next
-	Return $a_Ret
+	Return SetExtended($N, $a_Ret)
 EndFunc   ;==>_ArrayAinATo2d
 
 ; #FUNCTION# ======================================================================================
@@ -809,6 +818,7 @@ Func _ArrayFilter(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Co
 		Next
 		If $b_Withcount Then $a_Array[0] = $d_x - 1
 		ReDim $a_Array[$d_x]
+		Return SetExtended($d_x, True)
 	Else
 		Local $a_Ret[$w]
 		For $i = $d_Start To $d_EndIndex
@@ -819,7 +829,7 @@ Func _ArrayFilter(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Co
 		Next
 		If $b_Withcount Then $a_Ret[0] = $d_x - 1
 		ReDim $a_Ret[$d_x]
-		Return $a_Ret
+		Return SetExtended($d_x, $a_Ret)
 	EndIf
 EndFunc   ;==>_ArrayFilter
 
@@ -854,6 +864,7 @@ Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
 	EndIf
 
 	ReDim $aArray[$N - $iC]
+	Return SetExtended(UBound($aArray), True)
 EndFunc   ;==>_ArrayDeleteByCondition
 
 ; #FUNCTION# ======================================================================================
@@ -889,7 +900,7 @@ Func _ArrayDeleteMultiValues(ByRef $aArray)
 	Next
 
 	ReDim $aRet[$iR]
-	Return $aRet
+	Return SetExtended($iR, $aRet)
 EndFunc   ;==>_ArrayDeleteDuplicates
 
 
@@ -1245,6 +1256,7 @@ EndFunc   ;==>_ArrayGetNthBiggestElement
 ; Author ........: AspirinJunkie
 ; Related .......: __cb_NormalComparison(), __PartitionHoare, __ArrayDualPivotQuicksort
 ; Remarks .......: for sorting the quicksort-algorithm is used with hoare's algorithm for partitioning
+;                  algorithm is a unstable sorting algorithm
 ; =================================================================================================
 Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($a_Array) - 1, Const $b_DualPivot = True, Const $b_MedianPivot = True, Const $b_InsSort = True, Const $d_SmallThreshold = 25, Const $b_First = True)
 	If $b_First Then
@@ -1447,7 +1459,7 @@ EndFunc   ;==>_ArrayBinarySearchFlex
 ; Name ..........: _ArraySortInsertion
 ; Description ...: sort an array with a user-defined sorting rule with the insertion-sort algorithm
 ; Syntax ........:_ArraySortInsertion(ByRef $A, [$cb_Func = Default, [Const $i_Min = 0, [Const $i_Max = UBound($a_Array) - 1,{Const $b_First = True}]]])
-; Parameters ....: $a_Array       - the array which should be sorted (by reference means direct manipulating of the array - no copy)
+; Parameters ....: $a_Array       - the array (1D/2D) which should be sorted (by reference means direct manipulating of the array - no copy)
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
@@ -1458,9 +1470,18 @@ EndFunc   ;==>_ArrayBinarySearchFlex
 ; Author ........: AspirinJunkie
 ; Related .......: __cb_NormalComparison()
 ; Remarks .......: for sorting the quicksort-algorithm is used with hoare's algorithm for partitioning
+;                  Algorithm is a stable sorting algorithm
 ; =================================================================================================
 Func _ArraySortInsertion(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($A) - 1)
 	Local $t1, $t2
+
+	If UBound($A, 0) = 2 Then
+		Local $2D = True
+		$A = _Array2dToAinA($A)
+	Else
+		Local $2D = False
+	EndIf
+
 	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
 	For $i = $i_Min + 1 To $i_Max
 		$t1 = $A[$i]
@@ -1471,6 +1492,7 @@ Func _ArraySortInsertion(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 		Next
 		$A[$j + 1] = $t1
 	Next
+	If $2D Then $A = _ArrayAinATo2d($A)
 	Return True
 EndFunc   ;==>_ArraySortInsertion
 
