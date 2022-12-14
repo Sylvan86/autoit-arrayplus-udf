@@ -3,9 +3,9 @@
 
 
 
-Global $aArray[] = [1,2,3,4,5]
-_Array1DTo2D($aArray, 3)
-_ArrayDisplay($aArray)
+;  Global $aArray[] = [1,2,3,4,5]
+;  _Array1DTo2D($aArray, 3)
+;  _ArrayDisplay($aArray)
 
 
 
@@ -21,16 +21,19 @@ _ArrayDisplay($aArray)
 ;  ;  example 3 - create array of 20 elements with standard value set to "test"
 ;  _ArrayDisplay(_ArrayCreate(":19", "test"))
 
-;  ;  example 4 - create array inline with a sequence
+;  ;  example 4 - create array of 20 elements with their value set to the square of their current value
+;  _ArrayDisplay(_ArrayCreate(":19", "$A * $A"))
+
+;  ;  example 5 - create array inline with a sequence
 ;  _ArrayDisplay(_ArrayCreate("2:20:0.5"))
 
-;  ;  example 5 - create array inline with a sequence and calc the square root of every element:
+;  ;  example 6 - create array inline with a sequence and calc the square root of every element:
 ;  _ArrayDisplay(_ArrayCreate("2:20:0.5", sin))
 
-;  ;  example 6 - number of steps instead of step size
+;  ;  example 7 - number of steps instead of step size
 ;  _ArrayDisplay(_ArrayCreate("2:20|10"), "2:20|10")
 
-;  example 7 - inclusive vs. exclusive borders
+;  example 8 - inclusive vs. exclusive borders
 ;  _ArrayDisplay(_ArrayCreate("0:5"), "0:5")
 ;  _ArrayDisplay(_ArrayCreate("[0:5]"), "[0:5]")
 ;  _ArrayDisplay(_ArrayCreate("(0:5"), "(0:5")
@@ -129,6 +132,11 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;      Next
 ;      Return 0
 ;  EndFunc
+
+;  ; example 4 - sort Array with short string based user defined comparison function:
+;  _ArraySortFlexible($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
+;  _ArrayDisplay($Array, "sorted")
+
 #EndRegion _ArraySortFlexible()
 
 
@@ -143,6 +151,11 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  Func _myCompare(Const $sS, Const $sO)
 ;  	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
 ;  EndFunc   ;==>_myCompare
+
+;  ; example 2 - variant with string as user defined function:
+;  $a_Founds = _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
+;  If Not @error Then _ArrayDisplay($a_Founds)
+
 #EndRegion _ArrayBinarySearchFlex()
 
 
@@ -199,4 +212,41 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  _ArrayDisplay($aArray2D)
 ;  $aMinMax = _ArrayMinMax($aArray2D)
 ;  _ArrayDisplay($aMinMax)
+#endRegion
+
+
+#Region _ArrayDeleteByCondition()
+
+;  ; variant 1 - delete all elements, which begin with "B" by using a custom function:
+;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
+;  _ArrayDeleteByCondition($a_Array, myFunc)
+;  If Not @error Then _ArrayDisplay($a_Array)
+
+;  Func myFunc($A)
+;  	Return StringLeft($A, 1) = "B"
+;  EndFunc
+
+;  ; variant 2 - delete all elements, which begin with "B"
+;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
+;  _ArrayDeleteByCondition($a_Array, 'StringLeft($A, 1) = "B"')
+;  If Not @error Then _ArrayDisplay($a_Array)
+#endRegion
+
+
+#Region _ArrayFilter()
+
+; variant 1 - filter all elements beginning with "B" by using a custom function
+;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
+;  _ArrayFilter($a_Array, myFunc)
+;  If Not @error Then _ArrayDisplay($a_Array)
+
+;  Func myFunc($A)
+;  	Return StringLeft($A, 1) = "B"
+;  EndFunc
+
+; variant 2 - filter all elements beginning with "B" by using a AutoIt-code inside
+;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
+;  _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
+;  If Not @error Then _ArrayDisplay($a_Array)
+
 #endRegion

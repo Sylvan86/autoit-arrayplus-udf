@@ -58,6 +58,9 @@
 
 Global Enum Step *2 $A2S_BORDERS, $A2S_ALIGNDEC, $A2S_CENTERHEADENTRIES, $A2S_FIRSTROWHEADER, $A2S_TOCONSOLE, $A2S_CHECK_ARRAY_IN_ARRAY
 
+; global variable used in __ap_cb_comp_String():
+Global $sAPLUS_CBSTRING = ""
+
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2String()
@@ -484,6 +487,7 @@ EndFunc   ;==>_ArraySlice
 ;                  $vDefault      - [optional] If $sArrayDef = range syntax: (default:Default)
 ;                  |$vDefault = variant type: default value for array elements
 ;                  |$vDefault = Function: firstly sequence is build as defined in $sArrayDef, then this value is passed to this function and overwrite value in the array element (see example)
+;                               If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
 ;                  $bArrayInArray - [optional] if True and $sArrayDef is a AutoIt 2D-array definition, then a array-in-array is created instead (default:False)
 ; Return values .: Success: the arrayy
 ;                  Failure: Null and set error to:
@@ -513,7 +517,7 @@ Func _ArrayCreate($sArrayDef, $vDefault = Default, $bArrayInArray = False)
 			$iStep = ($iStop - $iStart) / ($nSteps - 1 + (StringInStr($sArrayDef, "(", 1) ? 1 : 0) + (StringInStr($sArrayDef, ")", 1) ? 1 : 0))
 		EndIf
 
-		; handle exclusive range borders 
+		; handle exclusive range borders
 		If StringInStr($sArrayDef, "(", 1) Then $iStart += $iStep
 		If StringInStr($sArrayDef, ")", 1) Then $iStop -= $iStep
 
@@ -589,10 +593,19 @@ EndFunc   ;==>_ArrayCreate
 ;                  #include <Array.au3>
 ;                  _ArrayDisplay(_ArrayRangeCreate(5,24, 2))
 ; =================================================================================================
-Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDefault = Default)
+Func _ArrayRangeCreate($nStart, $nStop, $nStep = 1, $vDefault = Default)
 	If Not IsNumber($nStart) Then Return SetError(1, 0, Null)
 	If Not IsNumber($nStop) Then Return SetError(2, 0, Null)
 	If Not IsNumber($nStep) Then Return SetError(3, 0, Null)
+
+	Local $bCbIsString = False
+
+	If StringInStr($vDefault, "$A") Then ; custom filter function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $vDefault
+		$vDefault = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	Local $iN = ($nStop - $nStart) / $nStep + 1
 	Local $aRange[$iN] = [(($vDefault = Default) ? $nStart : (IsFunc($vDefault) ? $vDefault($nStart) : $vDefault))]
@@ -602,6 +615,8 @@ Func _ArrayRangeCreate(Const $nStart, Const $nStop, Const $nStep = 1, Const $vDe
 		$nCurrent += $nStep
 		$aRange[$i] = $vDefault = Default ? $nCurrent : (IsFunc($vDefault) ? $vDefault($nCurrent) : $vDefault)
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 	Return SetExtended($iN, $aRange)
 EndFunc   ;==>_ArrayRangeCreate
 
@@ -739,6 +754,7 @@ EndFunc   ;==>_ArrayAinATo2d
 ; Syntax ........: _ArrayMap(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, Const $b_CBWithIndex = False, $d_EndIndex = Default)
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form function($value) or if $b_CBWithIndex: function($value, $index)
+;  								    If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_CBWithIndex - If true: $cb_Func has the form "function(element-value, element-index)"
@@ -748,22 +764,32 @@ EndFunc   ;==>_ArrayAinATo2d
 ;                     @error = 1: $a_Array is'nt an array
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayMap(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, Const $b_CBWithIndex = False, $d_EndIndex = Default)
+Func _ArrayMap(ByRef $a_Array, $cb_Func = Default, Const $b_Withcount = False, Const $b_Overwrite = True, Const $b_CBWithIndex = False, $d_EndIndex = Default)
+	Local $bCbIsString = False
 	If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 	Local Const $d_Start = $b_Withcount ? 1 : 0
 	If $d_EndIndex = Default Then $d_EndIndex = UBound($a_Array) - 1
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If $b_CBWithIndex Then
 		If $b_Overwrite Then
 			For $i = $d_Start To $d_EndIndex
 				$a_Array[$i] = $cb_Func($a_Array[$i], $i)
 			Next
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return True
 		Else
 			Local $a_Ret[UBound($a_Array)] = [$a_Array[0]]
 			For $i = $d_Start To $d_EndIndex
 				$a_Ret[$i] = $cb_Func($a_Array[$i], $i)
 			Next
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return $a_Ret
 		EndIf
 	Else
@@ -771,12 +797,14 @@ Func _ArrayMap(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Const
 			For $i = $d_Start To $d_EndIndex
 				$a_Array[$i] = $cb_Func($a_Array[$i])
 			Next
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return True
 		Else
 			Local $a_Ret[UBound($a_Array)] = [$a_Array[0]]
 			For $i = $d_Start To $d_EndIndex
 				$a_Ret[$i] = $cb_Func($a_Array[$i])
 			Next
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return $a_Ret
 		EndIf
 	EndIf
@@ -790,6 +818,8 @@ EndFunc   ;==>_ArrayMap
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form function($value)
 ;                                   the function return True for the elements which should retain in the array
+;  								    If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
+;                                   example: _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_EndIndex    - the end index until the elements should be processed
@@ -799,15 +829,29 @@ EndFunc   ;==>_ArrayMap
 ;                              5: invalid value for $d_EndIndex
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayFilter(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, $d_EndIndex = Default)
+Func _ArrayFilter(ByRef $a_Array, $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, $d_EndIndex = Default)
 	If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 	Local Const $w = UBound($a_Array)
 	Local $d_Start = Int(Not ($b_Withcount = False))
 	Local $d_x = $d_Start ; counter for filtered elements
+	Local $bCbIsString = False
 
 	If $d_EndIndex = Default Then $d_EndIndex = $w - 1
 	$d_EndIndex = Int($d_EndIndex)
 	If $d_EndIndex < 1 Or $d_EndIndex >= $w Then Return SetError(5, 0, False)
+
+	Local $2D = False
+	If UBound($a_Array, 0) = 2 Then
+		Local $2D = True
+		$a_Array = _Array2dToAinA($a_Array)
+	EndIf
+
+	If IsString($cb_Func) Then ; custom filter function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If $b_Overwrite Then
 		For $i = $d_Start To $d_EndIndex
@@ -817,7 +861,9 @@ Func _ArrayFilter(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Co
 			EndIf
 		Next
 		If $b_Withcount Then $a_Array[0] = $d_x - 1
+		If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 		ReDim $a_Array[$d_x]
+		If $2D Then $a_Array = _ArrayAinATo2d($a_Array)
 		Return SetExtended($d_x, True)
 	Else
 		Local $a_Ret[$w]
@@ -828,7 +874,9 @@ Func _ArrayFilter(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Co
 			EndIf
 		Next
 		If $b_Withcount Then $a_Ret[0] = $d_x - 1
+		If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 		ReDim $a_Ret[$d_x]
+		If $2D Then $a_Array = _ArrayAinATo2d($a_Array)
 		Return SetExtended($d_x, $a_Ret)
 	EndIf
 EndFunc   ;==>_ArrayFilter
@@ -840,11 +888,28 @@ EndFunc   ;==>_ArrayFilter
 ; Parameters ....: $a_Array       - the array where the elements should get deleted
 ;                  $cb_Func       - function variable points to a function of a form function($value)
 ;                                   the function return True for the elements which should get deleted from the array
+;                                   If string then the value is parsed as AutoIt-Code.
+;                                   The value inside the code for the current element should be named "$A"
+;                                   example: _ArrayDeleteByCondition($a_Array, 'StringLeft($A, 1) = "B"')
 ; Return values .: -
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
-	Local $iC = 0, $N = UBound($aArray)
+Func _ArrayDeleteByCondition(ByRef $aArray, $cbFunc = Default)
+	Local $iC = 0, $N = UBound($aArray), $bCbIsString = False
+
+	If IsString($cbFunc) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cbFunc
+		$cbFunc = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+
+	Local $2D = False
+	If UBound($aArray, 0) = 2 Then
+		Local $2D = True
+		$aArray = _Array2dToAinA($aArray)
+	EndIf
+
 	If IsFunc($cbFunc) Then
 		For $i = 0 To $N - 1
 			If $cbFunc($aArray[$i]) Then
@@ -863,7 +928,10 @@ Func _ArrayDeleteByCondition(ByRef $aArray, Const $cbFunc = Default)
 		Next
 	EndIf
 
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
 	ReDim $aArray[$N - $iC]
+	If $2D Then $aArray = _ArrayAinATo2d($aArray)
 	Return SetExtended(UBound($aArray), True)
 EndFunc   ;==>_ArrayDeleteByCondition
 
@@ -919,12 +987,20 @@ EndFunc   ;==>_ArrayDeleteDuplicates
 ;                              2: invalid array size
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayReduce(ByRef Const $a_Array, Const $cb_Func, Const $b_Withcount = False, $d_EndIndex = Default)
+Func _ArrayReduce(ByRef Const $a_Array, $cb_Func, Const $b_Withcount = False, $d_EndIndex = Default)
+	Local $bCbIsString = False
 	If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 	Local Const $w = UBound($a_Array)
 	Local $d_Start = Int(Not ($b_Withcount = False))
 	If $w < $d_Start Then Return SetError(2, 0, False)
 	Local $f_x = 0
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If $d_EndIndex = Default Then $d_EndIndex = $w - 1
 	$d_EndIndex = Int($d_EndIndex)
@@ -933,6 +1009,8 @@ Func _ArrayReduce(ByRef Const $a_Array, Const $cb_Func, Const $b_Withcount = Fal
 	For $i = $d_Start To $d_EndIndex
 		$cb_Func($f_x, $a_Array[$i])
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 	Return $f_x
 EndFunc   ;==>_ArrayReduce
 
@@ -945,6 +1023,7 @@ EndFunc   ;==>_ArrayReduce
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ; 									For 2D-Arrays you can use form $a[...] vs. $b[...] inside the user function.
+;                                   If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ;                  $d_Start   	  - index of the array where the search should start
 ;                  $d_End   	  - index of the array where the search should stop
 ; Return values .: Success: maximum value of the array
@@ -954,12 +1033,20 @@ EndFunc   ;==>_ArrayReduce
 ;                              3: $d_End > Array size
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayGetMax(ByRef $a_A, Const $cb_Func = Default, Const $d_Start = 0, Const $d_End = UBound($a_A) - 1)
+Func _ArrayGetMax(ByRef $a_A, $cb_Func = Default, Const $d_Start = 0, Const $d_End = UBound($a_A) - 1)
 	If $cb_Func = Default Then Return _ArrayMax($a_A)
+	Local $bCbIsString = False
 
 	If (Not IsArray($a_A)) Or ($d_End = -1) Then Return SetError(1, UBound($a_A), -1)
 	If $d_Start < 0 Or $d_Start > $d_End Then Return SetError(2, $d_Start, -1)
 	If $d_End > (UBound($a_A) - 1) Then Return SetError(3, $d_Start, -1)
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If UBound($a_A, 2) > 1 Then ; 2D-Array should be convert into an array-in-array for better handling in $cb_Func
 		Local $a_B = _Array2dToAinA($a_A)
@@ -975,14 +1062,17 @@ Func _ArrayGetMax(ByRef $a_A, Const $cb_Func = Default, Const $d_Start = 0, Cons
 		Next
 	EndIf
 
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
 	Return $a_Max
 EndFunc   ;==>_ArrayGetMax
+
 
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayGetMin
 ; Description ...: determine the element with the minimum value by using a user comparison function
-; Syntax ........: _ArrayGetMin(ByRef $a_A, [Const $cb_Func = Default, [Const $d_Start = 0, [Const $d_End = UBound($a_A) - 1]]])
+; Syntax ........: _ArrayGetMin(ByRef $a_A, [$cb_Func = Default, [Const $d_Start = 0, [Const $d_End = UBound($a_A) - 1]]])
 ; Parameters ....: $a_A       	  - the array (1D or 2D)
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
@@ -997,12 +1087,20 @@ EndFunc   ;==>_ArrayGetMax
 ;                              3: $d_End > Array size
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayGetMin(ByRef $a_A, Const $cb_Func = Default, Const $d_Start = 0, Const $d_End = UBound($a_A) - 1)
+Func _ArrayGetMin(ByRef $a_A, $cb_Func = Default, Const $d_Start = 0, Const $d_End = UBound($a_A) - 1)
 	If $cb_Func = Default Then Return _ArrayMin($a_A)
+	Local $bCbIsString = False
 
 	If (Not IsArray($a_A)) Or ($d_End = -1) Then Return SetError(1, UBound($a_A), -1)
 	If $d_Start < 0 Or $d_Start > $d_End Then Return SetError(2, $d_Start, -1)
 	If $d_End > (UBound($a_A) - 1) Then Return SetError(3, $d_Start, -1)
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If UBound($a_A, 2) > 1 Then ; 2D-Array should be convert into an array-in-array for better handling in $cb_Func
 		Local $a_B = _Array2dToAinA($a_A)
@@ -1018,6 +1116,8 @@ Func _ArrayGetMin(ByRef $a_A, Const $cb_Func = Default, Const $d_Start = 0, Cons
 		Next
 	EndIf
 
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
 	Return $a_Min
 EndFunc   ;==>_ArrayGetMin
 
@@ -1030,6 +1130,7 @@ EndFunc   ;==>_ArrayGetMin
 ;                  $iColumn      - [optional] If 2D-array: the column whose min/max values are to be determined. (default:Default)
 ;                  |If Default and $aArray = 2D-array: Min/Max-values/indices for every column
 ;                  $cbFunc      - [optional] function variable points to a function of a form "[1|0|-1] function(value, value)" (default:Default)
+;                                   If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ;                  |the function compares two values a,and b for a>b/a=b/a<b
 ;                  |an example is the AutoIt-Function "StringCompare".
 ; Return values .: Success: min/max values and their indices
@@ -1052,6 +1153,14 @@ EndFunc   ;==>_ArrayGetMin
 ; =================================================================================================
 Func _ArrayMinMax(ByRef $aArray, $iColumn = Default, $cbFunc = Default)
 	Local Enum $eMin, $eMax, $eMinInd, $eMaxInd
+	Local $bCbIsString = False
+
+	If IsString($cbFunc) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cbFunc
+		$cbFunc = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If $cbFunc <> Default And (Not IsFunc($cbFunc)) Then Return SetError(2, 0, Null)
 
@@ -1085,6 +1194,7 @@ Func _ArrayMinMax(ByRef $aArray, $iColumn = Default, $cbFunc = Default)
 				Next
 			EndIf
 
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return $aRet
 		Case 2
 			Local $nR = UBound($aArray), $nC = UBound($aArray, 2)
@@ -1155,6 +1265,7 @@ Func _ArrayMinMax(ByRef $aArray, $iColumn = Default, $cbFunc = Default)
 				EndIf
 			EndIf
 
+			If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 			Return $aRet
 		Case Else
 			Return SetError(1, UBound($aArray, 0), Null)
@@ -1175,10 +1286,20 @@ EndFunc   ;==>_ArrayMinMax
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   if $cb_Func = Defaul the normal AutoIt-datatype-comparison is used
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ; Return values .: the value of the nth biggest value
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayGetNthBiggestElement(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : Floor((UBound($a_A) - 1) / 2), $i_Min = 0, $i_Max = UBound($a_A) - 1, Const $cb_Func = Default)
+Func _ArrayGetNthBiggestElement2(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : Floor((UBound($a_A) - 1) / 2), $i_Min = 0, $i_Max = UBound($a_A) - 1, $cb_Func = Default)
+	Local $bCbIsString = False
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+
 	If $cb_Func = Default Then
 		Do
 			Local $iMiddle = Floor(($i_Max + $i_Min) / 2)
@@ -1221,6 +1342,7 @@ Func _ArrayGetNthBiggestElement(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : Fl
 			Local $i_PivotPos = __PartitionHoare($a_A, $i_Min, $i_Max, $p_Value, $cb_Func)
 
 			If $i_PivotPos = $d_Nth Then
+				If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 				Return $a_A[$i_PivotPos]
 			ElseIf $i_PivotPos > $d_Nth Then
 				$i_Max = $i_PivotPos - 1
@@ -1240,6 +1362,9 @@ EndFunc   ;==>_ArrayGetNthBiggestElement
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
+;                                   If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								       example: _ArraySortFlexible($a_Array, "StringCompare($A, $B)")
+;                                               _ArraySortFlexible($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
 ;                  $i_Max         - the end index for the sorting range in the array
 ;                  $b_MedianPivot - If True: pivot-element is median(first,last,middle) Else: pivot = list[Random]
@@ -1254,11 +1379,22 @@ EndFunc   ;==>_ArrayGetNthBiggestElement
 ;                              4: invalid combination of $i_Min and $i_Max
 ;                              5: invalid value for $cb_Func
 ; Author ........: AspirinJunkie
-; Related .......: __cb_NormalComparison(), __PartitionHoare, __ArrayDualPivotQuicksort
+; Related .......: __ap_cb_comp_Normal(), __PartitionHoare, __ArrayDualPivotQuicksort
 ; Remarks .......: for sorting the quicksort-algorithm is used with hoare's algorithm for partitioning
 ;                  algorithm is a unstable sorting algorithm
 ; =================================================================================================
 Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($a_Array) - 1, Const $b_DualPivot = True, Const $b_MedianPivot = True, Const $b_InsSort = True, Const $d_SmallThreshold = 25, Const $b_First = True)
+	Local $bCbIsString = False
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	ElseIf $cb_Func = Default Then
+		$cb_Func = __ap_cb_comp_Normal
+	EndIf
+
 	If $b_First Then
 		If $cb_Func = Default Then Return _ArraySort($a_Array, 0, 0, 0, 0, 1)
 		If UBound($a_Array, 0) = 2 Then
@@ -1267,7 +1403,7 @@ Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Co
 		Else
 			Local $2D = False
 		EndIf
-		; error-hadling:
+		; error-handling:
 		If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 		If Not IsInt($i_Min) Or $i_Min < 0 Then Return SetError(2, $i_Min, False)
 		If Not IsInt($i_Max) Or $i_Max > UBound($a_Array) - 1 Then Return SetError(3, $i_Min, False)
@@ -1324,6 +1460,8 @@ Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Co
 		; recursively sort the right list (if length > 1):
 		If $i_Max > $i + 1 Then _ArraySortFlexible($a_Array, $cb_Func, $i + 1, $i_Max, False, False)
 	EndIf
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 	If $b_First And $2D Then $a_Array = _ArrayAinATo2d($a_Array)
 	Return True
 EndFunc   ;==>_ArraySortFlexible
@@ -1335,6 +1473,7 @@ EndFunc   ;==>_ArraySortFlexible
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form "function(ByRef Reduced-Value, value)"
 ;                                   the function incrementally change the ReduceValue with the values
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_EndIndex    - the end index until the elements should be processed
@@ -1345,10 +1484,19 @@ EndFunc   ;==>_ArraySortFlexible
 ; Author ........: AspirinJunkie
 ; =================================================================================================
 Func _ArrayIsSorted(ByRef $a_Array, Const $i_Min = 0, Const $i_Max = UBound($a_Array) - 1, $cb_Func = Default)
+	Local $bCbIsString = False
+
 	If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 	If $i_Min > $i_Max Then Return SetError(2, $i_Max - $i_Min, False)
 	If Not IsInt($i_Min) Or $i_Min < 0 Then Return SetError(3, $i_Min, False)
 	If Not IsInt($i_Max) Or $i_Max > UBound($a_Array) - 1 Then Return SetError(4, $i_Min, False)
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
 
 	If UBound($a_Array, 0) = 2 Then
 		Local $2D = True
@@ -1364,6 +1512,8 @@ Func _ArrayIsSorted(ByRef $a_Array, Const $i_Min = 0, Const $i_Max = UBound($a_A
 			If $cb_Func($a_Array[$i], $a_Array[$i - 1]) = -1 Then Return False
 		EndIf
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 	If $2D Then $a_Array = _ArrayAinATo2d($a_Array)
 	Return True
 EndFunc   ;==>_ArrayIsSorted
@@ -1378,6 +1528,8 @@ EndFunc   ;==>_ArrayIsSorted
 ;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
 ;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
 ;                                   the first parameter a value can be passed to the function through $sS to make it more dynamic.
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;                                   example: _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
 ;                  $sS          - a value to be passed to $cb_Func to make it more dynamic
 ;                  $iMi         - the start index of the search area
 ;                  $iMa         - the end index of the search area
@@ -1401,15 +1553,24 @@ EndFunc   ;==>_ArrayIsSorted
 ;                  	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
 ;                  EndFunc   ;==>_myCompare
 ; =================================================================================================
-Func _ArrayBinarySearchFlex(ByRef $A, $cb_Func, $sS, $iMi = 0, $iMa = UBound($A) - 1)
-	Local $i, $e
+Func _ArrayBinarySearchFlex(ByRef $A, $cb_Func, $sS = Default, $iMi = 0, $iMa = UBound($A) - 1)
+	Local $i, $e, $bCbIsString = False
 	Local $aP[3] = ['CallArgArray', $sS]
 
 	If Not IsArray($A) Then Return SetError(3)
-	If Not IsFunc($cb_Func) Then Return SetError(4)
+
 	If Not IsInt($iMi) Or $iMi < 0 Or $iMi >= UBound($A) Then Return SetError(5, $iMi)
 	If Not IsInt($iMa) Or $iMa < 0 Or $iMa >= UBound($A) Then Return SetError(6, $iMa)
 	If $iMa < $iMi Then Return SetError(7)
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+
+	If Not IsFunc($cb_Func) Then Return SetError(4)
 
 	While $iMi <= $iMa
 		$i = Floor(($iMa + $iMi) / 2)
@@ -1451,6 +1612,8 @@ Func _ArrayBinarySearchFlex(ByRef $A, $cb_Func, $sS, $iMi = 0, $iMa = UBound($A)
 		EndSwitch
 	WEnd
 
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
 	Local $aR = []
 	Return SetError(1, 0, $aR)
 EndFunc   ;==>_ArrayBinarySearchFlex
@@ -1464,16 +1627,18 @@ EndFunc   ;==>_ArrayBinarySearchFlex
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;                                   example: _ArraySortInsertion($a_Array, "StringCompare($A, $B)")
+;                                            _ArraySortInsertion($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
 ;                  $i_Max         - the end index for the sorting range in the array
 ; Return values .: Success: True  - array is sorted now
 ; Author ........: AspirinJunkie
 ; Related .......: __cb_NormalComparison()
-; Remarks .......: for sorting the quicksort-algorithm is used with hoare's algorithm for partitioning
-;                  Algorithm is a stable sorting algorithm
+; Remarks .......: Algorithm is a stable sorting algorithm
 ; =================================================================================================
 Func _ArraySortInsertion(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($A) - 1)
-	Local $t1, $t2
+	Local $t1, $t2, $bCbIsString = False
 
 	If UBound($A, 0) = 2 Then
 		Local $2D = True
@@ -1482,7 +1647,15 @@ Func _ArraySortInsertion(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 		Local $2D = False
 	EndIf
 
-	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	ElseIf $cb_Func = Default Then
+		$cb_Func = __ap_cb_comp_Normal
+	EndIf
+
 	For $i = $i_Min + 1 To $i_Max
 		$t1 = $A[$i]
 		For $j = $i - 1 To $i_Min Step -1
@@ -1492,6 +1665,9 @@ Func _ArraySortInsertion(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 		Next
 		$A[$j + 1] = $t1
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
 	If $2D Then $A = _ArrayAinATo2d($A)
 	Return True
 EndFunc   ;==>_ArraySortInsertion
@@ -1506,17 +1682,28 @@ EndFunc   ;==>_ArraySortInsertion
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
-;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;                                   example: _ArraySortSelection($a_Array, "StringCompare($A, $B)")
+;                                            _ArraySortSelection($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
 ;                  $i_Max         - the end index for the sorting range in the array
 ; Return values .: Success: True  - array is sorted now
 ; Author ........: AspirinJunkie
-; Related .......: __cb_NormalComparison()
+; Related .......: __ap_cb_comp_Normal()
 ; Remarks .......: special implementation OSSA from https://www.researchgate.net/publication/272609538_Optimized_Selection_Sort_Algorithm_is_faster_than_Insertion_Sort_Algorithm_a_Comparative_Study
 ;                  and fixed from here: https://stackoverflow.com/questions/39798057/optimized-selection-sort-algorithm-ossa-how-to-fix-it
 ; =================================================================================================
 Func _ArraySortSelection(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($A) - 1)
-	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
+	Local $bCbIsString = False
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	ElseIf $cb_Func = Default Then
+		$cb_Func = __ap_cb_comp_Normal
+	EndIf
 
 	Local $k = $i_Min, _
 			$N = $i_Max, _
@@ -1551,6 +1738,8 @@ Func _ArraySortSelection(ByRef $A, $cb_Func = Default, Const $i_Min = 0, Const $
 		$k += 1
 		If $i <= $k Then ExitLoop
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 EndFunc   ;==>_ArraySortSelection
 
 
@@ -1563,6 +1752,7 @@ EndFunc   ;==>_ArraySortSelection
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ;                  $iMax          - the end index until the array should get sorted
 ; Return values .: Success: True  - array is sorted now
 ;                  Failure: False
@@ -1572,10 +1762,16 @@ EndFunc   ;==>_ArraySortSelection
 ; Author ........: AspirinJunkie
 ; =================================================================================================
 Func _ArrayHeapSortBinary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
-	Local $N = $iMax + 1
+	Local $N = $iMax + 1, $bCbIsString = False
 	Local $k, $S, $j
 
-	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+	If $cb_Func = Default Then $cb_Func = __ap_cb_comp_Normal
 
 	; error-handling:
 	If Not IsArray($A) Then Return SetError(1, 0, False)
@@ -1614,7 +1810,7 @@ Func _ArrayHeapSortBinary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 		WEnd
 		$A[$j] = $S
 	Next
-
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 	Return True
 EndFunc   ;==>_ArrayHeapSortBinary
 
@@ -1628,6 +1824,7 @@ EndFunc   ;==>_ArrayHeapSortBinary
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
+;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
 ;                  $iMax          - the end index until the array should get sorted
 ; Return values .: Success: True  - array is sorted now
 ;                  Failure: False
@@ -1639,9 +1836,15 @@ EndFunc   ;==>_ArrayHeapSortBinary
 Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 	Local $N = $iMax + 1
 	Local $i, $j, $S
-	Local $k, $m, $r, $x, $y, $z
+	Local $k, $m, $r, $x, $y, $z, $bCbIsString = False
 
-	If $cb_Func = Default Then $cb_Func = __cb_NormalComparison
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+	If $cb_Func = Default Then $cb_Func = __ap_cb_comp_Normal
 
 	; error-handling:
 	If Not IsArray($A) Then Return SetError(1, 0, False)
@@ -1704,16 +1907,19 @@ Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 		WEnd
 		$A[$i] = $S
 	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+	Return True
 EndFunc   ;==>_ArrayHeapSortTernary
 
 #EndRegion
 
-#Region Helper functions from Dynarray-UDF
+#Region Helper functions
 
 ; #FUNCTION# ======================================================================================
-; Name ..........: __cb_NormalComparison
+; Name ..........: __ap_cb_comp_Normal
 ; Description ...: helper function which provides a standard AutoIt-comparison for flexible sorting
-; Syntax ........: __cb_NormalComparison(ByRef Const $a, ByRef Const $b)
+; Syntax ........: __ap_cb_comp_Normal(ByRef Const $A, ByRef Const $B)
 ; Parameters ....: $a             - the first value
 ;                  $b             - the second value
 ; Return values .:  1: a > b
@@ -1721,9 +1927,48 @@ EndFunc   ;==>_ArrayHeapSortTernary
 ;                  -1: a < b
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func __cb_NormalComparison(ByRef Const $A, ByRef Const $b)
+Func __ap_cb_comp_Normal(ByRef Const $A, ByRef Const $b)
 	Return $A > $b ? 1 : $A = $b ? 0 : -1
-EndFunc   ;==>__cb_NormalComparison
+EndFunc   ;==>__ap_cb_comp_Normal
+
+; #FUNCTION# ======================================================================================
+; Name ..........: __ap_cb_comp_Natural
+; Description ...: helper function which provides a explorer-like comparison for natural sorting
+;                  (more intuitively if numerical values occur in the strings)
+; Syntax ........: __ap_cb_comp_Natural(ByRef Const $A, ByRef Const $B)
+; Parameters ....: $A             - the first value
+;                  $B             - the second value
+; Return values .:  1: a > b
+;                   0: a = b
+;                  -1: a < b
+; Author ........: AspirinJunkie
+; =================================================================================================
+Func __ap_cb_comp_Natural(Const $A, Const $B)
+    Local Static $h_DLL_Shlwapi = DllOpen("Shlwapi.dll")
+    Local $a_Ret = DllCall($h_DLL_Shlwapi, "int", "StrCmpLogicalW", "wstr", $A, "wstr", $B)
+    If @error Then Return SetError(1, @error, 0)
+    If Not IsString($A) Or Not IsString($B) Then Return $A > $B ? 1 : $A < $B ? -1 : 0
+    Return $a_Ret[0]
+EndFunc   ;==>MyCompare
+
+; #FUNCTION# ======================================================================================
+; Name ..........: __ap_cb_comp_String
+; Description ...: helper function which executes a comparison function in the string within the variable $sAPLUS_CBSTRING
+; Syntax ........: __ap_cb_comp_String(Const $A, Const $B)
+; Parameters ....: $a             - the first value
+;                  $b             - the second value
+; Return values .:  string in $sAPLUS_CBSTRING should execute to the following return values:
+;                   1: a > b
+;                   0: a = b
+;                  -1: a < b
+; Related .......: global Variable named $sAPLUS_CBSTRING
+; Remarks .......: for using this function set Opt("ExpandEnvStrings", 1) before calling
+; Author ........: AspirinJunkie
+; =================================================================================================
+Func __ap_cb_comp_String(ByRef $A, Const $b = Default)
+	Local $vRet = Execute($sAPLUS_CBSTRING)
+	Return $vRet
+EndFunc
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: __swap
@@ -1839,7 +2084,7 @@ EndFunc   ;==>__PartitionHoare
 ;                              4: invalid combination of $i_Min and $i_Max
 ;                              5: invalid value for $cb_Func
 ; Author ........: AspirinJunkie
-; Related .......: __cb_NormalComparison()
+; Related .......: __ap_cb_comp_Normal()
 ; =================================================================================================
 Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Const $right = UBound($A) - 1, $div = 3, Const $d_SmThr = 47, Const $b_MedQuant = False, Const $b_First = True)
 	Local $d_Len = $right - $left
