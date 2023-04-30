@@ -1,66 +1,82 @@
-; #INDEX# =======================================================================================================================
-; Title .........: ArrayPlus-UDF
-; Version .......: 0.2
-; AutoIt Version : 3.3.16.0
-; Language ......: english (german maybe by accident)
-; Description ...: advanced helpers for array handling
-; Author(s) .....: AspirinJunkie
-; Last changed ..: 2022-06-22
-; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
-; ===============================================================================================================================
-
-
-;  ############# TODO ####################
-;  Bei cbFunc anstatt einer Funktion einen String ermöglichen.
-;  So muss für kleine Sachen nicht immer eine komplette Funktion geschrieben werden.
-;  #######################################
-
-
-
-
-; #Function list# =======================================================================================================================
-; ---- creation ------
-;  _ArrayCreate					- create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
-;  _ArrayRangeCreate()			- create a sequence as 1D-array - mainly helper function for _ArrayCreate
-
-; ---- manipulation and conversion ----
-;  _ArraySlice 					- python style array slicing to extract ranges, rows, columns, single values
-;  _Array1DTo2D 				- convert a 1D-array into a 2D-array and take over the values to the first column (for inverted case - extract a row column 2D-array - use _ArraySlice)
-;  _Array2dToAinA				- convert 2D-array into a array-in-array
-;  _ArrayAinATo2d				- convert array-in-array into a 2D array
-;  _Array2String				- print a 1D/2D-array to console or variable clearly arranged
-;  _ArrayAlignDec				- align a 1D-array or a column of a 2D-array at the decimal point or right aligned
-;  _ArrayMap					- apply a function to every element of a array ("map" the function)
-;  _ArrayReduce					- reduce the elements of a array to one value with an external function
-;  _ArrayFilter					- filter the elements of an array with a external function
-;  _ArrayDeleteByCondition		- delete all empty string elements or which fulfil a user-defined condition inside an array
-;  _ArrayDeleteMultiValues()    - removes elements that appear more than once in the string. (not only the duplicates)
-
-; ---- sorting ----
-;  _ArraySortFlexible			- sort an array with a user-defined sorting rule
-;  _ArraySortInsertion			- sort an array with a user-defined sorting rule with the insertion-sort algorithm
-;  _ArraySortSelection			- sort an array with a user-defined sorting rule with the selection-sort algorithm (minimal number of swaps)
-;  _ArrayIsSorted				- checks whether an Array is already sorted (by using a user comparison function)
-;  _ArrayHeapSortBinary			- sort an array with Binary-Min-Heap-Sort algorithm (by using a user comparison function)
-;  _ArrayHeapSortTernary		- sort an array with Ternary-Min-Heap-Sort algorithm (by using a user comparison function)
-
-; ---- searching ----
-;  _ArrayBinarySearchFlex 		- performs a binary search for an appropriately sorted array using an individual comparison function
-;  _ArrayGetMax 				- determine the element with the maximum value by using a user comparison function
-;  _ArrayGetMin					- determine the element with the minimum value by using a user comparison function
-;  _ArrayMinMax                 - returns min and max value and their indices of a 1D array or all/specific column of a 2D array
-;  _ArrayGetNthBiggestElement	- determine the nth biggest element (e.g.: median value) in an unsorted array without sorting it (faster)
-; ===============================================================================================================================
-
 #include-once
 #include <Array.au3>
 #include <File.au3>
 
+
+; #INDEX# =======================================================================================================================
+; Title .........: ArrayPlus-UDF
+; Version .......: 0.3
+; AutoIt Version : 3.3.16.1
+; Language ......: english (german maybe by accident)
+; Description ...: advanced helpers for array handling
+; Author(s) .....: AspirinJunkie
+; Last changed ..: 2022-12-14
+; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
+; License .......: This work is free.
+;                  You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2,
+;                  as published by Sam Hocevar.
+;                  See http://www.wtfpl.net/ for more details.
+; ===============================================================================================================================
+
+
+; #CURRENT# =====================================================================================================================
+;  ---- creation ------
+;  _ArrayCreate                 - create 1D/2D-arrays or Array-In-Arrays in one code-line; supports python-like range-syntax for creating sequences
+;  _ArrayRangeCreate()          - create a sequence as 1D-array - mainly helper function for _ArrayCreate
+
+;  ---- manipulation and conversion ----
+;  _ArraySlice                  - python style array slicing to extract ranges, rows, columns, single values
+;  _Array1DTo2D                 - convert a 1D-array into a 2D-array and take over the values to the first column (for inverted case - extract a row or column from 2D-array - use _ArraySlice)
+;  _Array2dToAinA               - convert 2D-array into a array-in-array
+;  _ArrayAinATo2d               - convert array-in-array into a 2D array
+;  _Array2String                - print a 1D/2D-array to console or variable clearly arranged
+;  _ArrayAlignDec               - align a 1D-array or a column of a 2D-array at the decimal point or right aligned
+;  _ArrayMap                    - apply a function to every element of a array ("map" the function)
+;  _ArrayReduce                 - reduce the elements of a array to one value with an external function
+;  _ArrayFilter                 - filter the elements of an array with a external function
+;  _ArrayDeleteByCondition      - delete all empty string elements or elements which fulfil a user-defined condition inside an array
+;  _ArrayDeleteMultiValues()    - removes elements that appear more than once in the string. (not only the duplicates)
+
+;  ---- sorting ----
+;  _ArraySortFlexible           - sort an array with a user-defined sorting rule
+;  _ArraySortInsertion          - sort an array with a user-defined sorting rule with the insertion-sort algorithm
+;  _ArraySortSelection          - sort an array with a user-defined sorting rule with the selection-sort algorithm (minimal number of swaps)
+;  _ArrayIsSorted               - checks whether an Array is already sorted (by using a user comparison function)
+;  _ArrayHeapSortBinary         - sort an array with Binary-Min-Heap-Sort algorithm (by using a user comparison function)
+;  _ArrayHeapSortTernary        - sort an array with Ternary-Min-Heap-Sort algorithm (by using a user comparison function)
+
+;  ---- searching ----
+;  _ArrayBinarySearchFlex       - performs a binary search for an appropriately sorted array using an individual comparison function
+;  _ArrayGetMax                 - determine the element with the maximum value by using a user comparison function
+;  _ArrayGetMin                 - determine the element with the minimum value by using a user comparison function
+;  _ArrayMinMax                 - returns min and max value and their indices of a 1D array or all/specific column of a 2D array
+;  _ArrayGetNthBiggestElement   - determine the nth biggest element (e.g.: median value) in an unsorted array without sorting it (faster)
+; ===============================================================================================================================
+
+; #INTERNAL_USE_ONLY# ===========================================================================================================
+; __ap_cb_comp_Normal
+; __ap_cb_comp_Natural
+; __ap_cb_comp_String
+; __ap_swap
+; __ap_PartitionHoare
+; __ap_ArrayDualPivotQuicksort
+; _2Sort
+; __2Sort
+; _3Sort
+; __3Sort
+; _4Sort
+; __4Sort
+; _5Sort
+; __5Sort
+; ===============================================================================================================================
+
+; #VARIABLES# ===================================================================================================================
+Global $sAPLUS_CBSTRING = "" ; global variable used in __ap_cb_comp_String():
+; ===============================================================================================================================
+
+; #CONSTANTS# ===================================================================================================================
 Global Enum Step *2 $A2S_BORDERS, $A2S_ALIGNDEC, $A2S_CENTERHEADENTRIES, $A2S_FIRSTROWHEADER, $A2S_TOCONSOLE, $A2S_CHECK_ARRAY_IN_ARRAY
-
-; global variable used in __ap_cb_comp_String():
-Global $sAPLUS_CBSTRING = ""
-
+; ===============================================================================================================================
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2String()
@@ -84,7 +100,7 @@ Global $sAPLUS_CBSTRING = ""
 ;                  Failure
 ; Author ........: aspirinjunkie
 ; Modified ......: 2022-06-20
-; Related .......: __stringCenter, _ArrayAlignDec
+; Related .......: __ap_stringCenter, _ArrayAlignDec
 ; Example .......: Yes
 ;                  Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 4.1, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
 ;                  ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
@@ -146,7 +162,7 @@ Func _Array2String($aArray, $sHeader = Default, $cSep = " | ", $iDecimals = Defa
 				If StringLen($aHeader[$iH]) > $aSizes[$iH] Then $aSizes[$iH] = StringLen($aHeader[$iH])
 
 				$sOut &= BitAND($dFlags, $A2S_CENTERHEADENTRIES) ? _
-						__stringCenter($aHeader[$iH], $aSizes[$iH]) & ($iH = $nC - 1 ? "" : $cSep) : _
+						__ap_stringCenter($aHeader[$iH], $aSizes[$iH]) & ($iH = $nC - 1 ? "" : $cSep) : _
 						StringFormat("% " & $aSizes[$iH] & "s", $aHeader[$iH]) & ($iH = $nC - 1 ? "" : $cSep)
 			Next
 			$sOut &= @CRLF
@@ -658,39 +674,6 @@ Func _Array1DTo2D(ByRef $aArray, Const $nCols, $bInPlace = True)
 	EndIf
 EndFunc   ;==>_Array1DTo2D
 
-#Region Helper-Functions
-
-; #FUNCTION# ======================================================================================
-; Name ..........: __stringCenter()
-; Description ...: helper function to print a string centered
-; Syntax ........: __stringCenter($sString[, $nChars = Default])
-; Parameters ....: $sString - the string to be centered. If string is surrounded by spaces and $nchars = Default, the StringLen with spaces is used as target width
-;                  $nChars  - [optional] target width - must be > than StringLen($sString) (default:Default)
-; Return values .: Success: the centered (by surrounding spaces) string
-;                  Failure: Null and set @error to
-;                  |1: $nChars invalid value; @extended = $nChars
-; Author ........: aspirinjunkie
-; Modified ......: 2022-06-20
-; Example .......: Yes
-;                  ConsoleWrite("|" & __stringCenter("test", 10) & "|" & @CRLF)
-;                  ConsoleWrite("|" & __stringCenter("     test ") & "|" & @CRLF)
-; =================================================================================================
-Func __stringCenter($sString, $nChars = Default)
-	If $nChars = Default Then
-		$nChars = StringLen($sString)
-	EndIf
-	$sString = StringStripWS($sString, 3)
-	Local $nString = StringLen($sString)
-
-	If $nChars < $nString Or $nChars < 1 Then Return SetError(1, $nChars, Null)
-
-	Return StringFormat("%" & Ceiling(($nChars - $nString) / 2) & "s%" & _
-			$nString & "s%" & _
-			Floor(($nChars - $nString) / 2) & "s", _
-			"", $sString, "")
-EndFunc   ;==>__stringCenter
-
-#EndRegion Helper-Functions
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _Array2dToAinA()
@@ -1290,7 +1273,7 @@ EndFunc   ;==>_ArrayMinMax
 ; Return values .: the value of the nth biggest value
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayGetNthBiggestElement2(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : Floor((UBound($a_A) - 1) / 2), $i_Min = 0, $i_Max = UBound($a_A) - 1, $cb_Func = Default)
+Func _ArrayGetNthBiggestElement(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : Floor((UBound($a_A) - 1) / 2), $i_Min = 0, $i_Max = UBound($a_A) - 1, $cb_Func = Default)
 	Local $bCbIsString = False
 
 	If IsString($cb_Func) Then ; comparison function directly as a string
@@ -1315,7 +1298,7 @@ Func _ArrayGetNthBiggestElement2(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : F
 				$a_A[$i_Max] = $p_Value
 			EndIf
 
-			Local $i_PivotPos = __PartitionHoare($a_A, $i_Min, $i_Max, $p_Value)
+			Local $i_PivotPos = __ap_PartitionHoare($a_A, $i_Min, $i_Max, $p_Value)
 
 			If $i_PivotPos = $d_Nth Then
 				Return $a_A[$i_PivotPos]
@@ -1339,7 +1322,7 @@ Func _ArrayGetNthBiggestElement2(ByRef $a_A, $d_Nth = (UBound($a_A) = 1) ? 0 : F
 				$a_A[$i_Max] = $p_Value
 			EndIf
 
-			Local $i_PivotPos = __PartitionHoare($a_A, $i_Min, $i_Max, $p_Value, $cb_Func)
+			Local $i_PivotPos = __ap_PartitionHoare($a_A, $i_Min, $i_Max, $p_Value, $cb_Func)
 
 			If $i_PivotPos = $d_Nth Then
 				If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
@@ -1379,12 +1362,14 @@ EndFunc   ;==>_ArrayGetNthBiggestElement
 ;                              4: invalid combination of $i_Min and $i_Max
 ;                              5: invalid value for $cb_Func
 ; Author ........: AspirinJunkie
-; Related .......: __ap_cb_comp_Normal(), __PartitionHoare, __ArrayDualPivotQuicksort
+; Related .......: __ap_cb_comp_Normal(), __ap_PartitionHoare, __ap_ArrayDualPivotQuicksort
 ; Remarks .......: for sorting the quicksort-algorithm is used with hoare's algorithm for partitioning
 ;                  algorithm is a unstable sorting algorithm
 ; =================================================================================================
-Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Const $i_Max = UBound($a_Array) - 1, Const $b_DualPivot = True, Const $b_MedianPivot = True, Const $b_InsSort = True, Const $d_SmallThreshold = 25, Const $b_First = True)
+Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, $i_Max = UBound($a_Array) - 1, Const $b_DualPivot = True, Const $b_MedianPivot = True, Const $b_InsSort = True, Const $d_SmallThreshold = 25, Const $b_First = True)
 	Local $bCbIsString = False
+
+	If $i_Max = 0 Then $i_Max = UBound($a_Array) - 1
 
 	If IsString($cb_Func) Then ; comparison function directly as a string
 		Local $bBefore = Opt("ExpandEnvStrings", 1)
@@ -1413,7 +1398,7 @@ Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Co
 
 	; choose the sorting-algorithm:
 	If $b_DualPivot Then ; Dual-Pivot-Quicksort
-		__ArrayDualPivotQuicksort($a_Array, $cb_Func, $i_Min, $i_Max)
+		__ap_ArrayDualPivotQuicksort($a_Array, $cb_Func, $i_Min, $i_Max)
 	ElseIf $b_InsSort And (($i_Max - $i_Min) < $d_SmallThreshold) Then ; insertion-sort:
 		Switch $i_Max - $i_Min + 1
 			Case 2
@@ -1454,7 +1439,7 @@ Func _ArraySortFlexible(ByRef $a_Array, $cb_Func = Default, Const $i_Min = 0, Co
 			$a_Array[$i_Max] = $p_Value
 		EndIf
 
-		Local $i = __PartitionHoare($a_Array, $i_Min, $i_Max, $p_Value, $cb_Func)
+		Local $i = __ap_PartitionHoare($a_Array, $i_Min, $i_Max, $p_Value, $cb_Func)
 		; sort the left list (if length > 1) :
 		If $i_Min < $i - 1 Then _ArraySortFlexible($a_Array, $cb_Func, $i_Min, $i - 1, False, False)
 		; recursively sort the right list (if length > 1):
@@ -1971,26 +1956,26 @@ Func __ap_cb_comp_String(ByRef $A, Const $b = Default)
 EndFunc
 
 ; #FUNCTION# ======================================================================================
-; Name ..........: __swap
+; Name ..........: __ap_swap
 ; Description ...: helper function for swap two values inside an array
-; Syntax ........: __swap(ByRef Const $a, ByRef Const $b)
+; Syntax ........: __ap_swap(ByRef Const $a, ByRef Const $b)
 ; Parameters ....: $a             - the array
 ;                  $i             - index of value 1
 ;                  $j             - index of value 2
 ; Return values .: -
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func __swap(ByRef $A, Const $i, Const $j)
+Func __ap_swap(ByRef $A, Const $i, Const $j)
 	Local Const $t = $A[$i]
 	$A[$i] = $A[$j]
 	$A[$j] = $t
-EndFunc   ;==>__swap
+EndFunc   ;==>__ap_swap
 
 ; #FUNCTION# ======================================================================================
-; Name ..........: __PartitionHoare
+; Name ..........: __ap_PartitionHoare
 ; Description ...: helper function for partitioning inside the quicksort-function
 ;                  there exists several algorithms for this.
-; Syntax ........: __PartitionHoare(ByRef $a_Array, Const $i_Min, Const $i_Max, Const $p_Value, Const $cb_Func)
+; Syntax ........: __ap_PartitionHoare(ByRef $a_Array, Const $i_Min, Const $i_Max, Const $p_Value, Const $cb_Func)
 ; Parameters ....: $a_Array       - the array
 ;                  $i_Min         - the start index for the partitioning range in the array
 ;                  $i_Max         - the end index for the partitioning range in the array
@@ -2001,7 +1986,7 @@ EndFunc   ;==>__swap
 ; Return values .: the position of the pivot-element
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func __PartitionHoare(ByRef $a_Array, Const $i_Min, Const $i_Max, Const $p_Value, Const $cb_Func = Default)
+Func __ap_PartitionHoare(ByRef $a_Array, Const $i_Min, Const $i_Max, Const $p_Value, Const $cb_Func = Default)
 	; divide the array in two separate lists in dependency of the pivot-element
 	; there are several algorithms to reach this (here used: "Quickselect / Hoare's selection algorithm" - see "Lomuto's algorithm")
 	Local $i = $i_Min - 1
@@ -2058,13 +2043,13 @@ Func __PartitionHoare(ByRef $a_Array, Const $i_Min, Const $i_Max, Const $p_Value
 	EndIf
 
 	Return $i
-EndFunc   ;==>__PartitionHoare
+EndFunc   ;==>__ap_PartitionHoare
 
 
 ; #FUNCTION# ======================================================================================
-; Name ..........: __ArrayDualPivotQuicksort
+; Name ..........: __ap_ArrayDualPivotQuicksort
 ; Description ...: sort an array with the Dual-Pivot-Quicksort from Vladimir Yaroslavskiy
-; Syntax ........:__ArrayDualPivotQuicksort(ByRef $A, [$cb_Func = Default, [Const $left = 0, [Const $right = UBound($a_Array) - 1, Const $d_SmThr = 25, [Const $b_MedQuant = True, {Const $b_First = True}]]]]])
+; Syntax ........:__ap_ArrayDualPivotQuicksort(ByRef $A, [$cb_Func = Default, [Const $left = 0, [Const $right = UBound($a_Array) - 1, Const $d_SmThr = 25, [Const $b_MedQuant = True, {Const $b_First = True}]]]]])
 ; Parameters ....: $A             - the array which should be sorted (by reference means direct manipulating of the array - no copy)
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
@@ -2086,7 +2071,7 @@ EndFunc   ;==>__PartitionHoare
 ; Author ........: AspirinJunkie
 ; Related .......: __ap_cb_comp_Normal()
 ; =================================================================================================
-Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Const $right = UBound($A) - 1, $div = 3, Const $d_SmThr = 47, Const $b_MedQuant = False, Const $b_First = True)
+Func __ap_ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Const $right = UBound($A) - 1, $div = 3, Const $d_SmThr = 47, Const $b_MedQuant = False, Const $b_First = True)
 	Local $d_Len = $right - $left
 	Local $k, $t
 	Local $t1, $t2 ; variables for insertion-sort
@@ -2156,11 +2141,11 @@ Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Co
 
 	; ensure that m1 < m2 and move them to the outer fields
 	If $cb_Func($A[$m1], $A[$m2]) = -1 Then
-		__swap($A, $m1, $left)
-		__swap($A, $m2, $right)
+		__ap_swap($A, $m1, $left)
+		__ap_swap($A, $m2, $right)
 	Else
-		__swap($A, $m1, $right)
-		__swap($A, $m2, $left)
+		__ap_swap($A, $m1, $right)
+		__ap_swap($A, $m2, $left)
 	EndIf
 
 	; pivots:
@@ -2176,7 +2161,7 @@ Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Co
 	Do
 		; move elements < pivot1 to the beginning of the array
 		If $cb_Func($A[$k], $pivot1) = -1 Then
-			; __swap($A, $k, $less)
+			; __ap_swap($A, $k, $less)
 			$t = $A[$k]
 			$A[$k] = $A[$less]
 			$A[$less] = $t
@@ -2186,13 +2171,13 @@ Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Co
 			While $k < $great And $cb_Func($A[$great], $pivot2) = 1
 				$great -= 1
 			WEnd
-			;__swap($A, $k, $great)
+			;__ap_swap($A, $k, $great)
 			$t = $A[$k]
 			$A[$k] = $A[$great]
 			$A[$great] = $t
 			$great -= 1
 			If $cb_Func($A[$k], $pivot1) = -1 Then
-				;__swap($A, $k, $less)
+				;__ap_swap($A, $k, $less)
 				$t = $A[$k]
 				$A[$k] = $A[$less]
 				$A[$less] = $t
@@ -2205,31 +2190,31 @@ Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Co
 	; swaps
 	Local $dist = $great - $less
 	If $dist < 13 Then $div += 1
-	__swap($A, $less - 1, $left)
-	__swap($A, $great + 1, $right)
+	__ap_swap($A, $less - 1, $left)
+	__ap_swap($A, $great + 1, $right)
 
 	; subarrays
-	If ($less - 2 - $left) > 0 Then __ArrayDualPivotQuicksort($A, $cb_Func, $left, $less - 2, $div, $d_SmThr, $b_MedQuant, False)
-	If ($right - ($great + 2)) > 0 Then __ArrayDualPivotQuicksort($A, $cb_Func, $great + 2, $right, $div, $d_SmThr, $b_MedQuant, False)
+	If ($less - 2 - $left) > 0 Then __ap_ArrayDualPivotQuicksort($A, $cb_Func, $left, $less - 2, $div, $d_SmThr, $b_MedQuant, False)
+	If ($right - ($great + 2)) > 0 Then __ap_ArrayDualPivotQuicksort($A, $cb_Func, $great + 2, $right, $div, $d_SmThr, $b_MedQuant, False)
 
 	; equal elements
 	If ($dist > ($d_Len - 13)) And ($cb_Func($pivot2, $pivot1) <> 0) Then
 		$k = $less
 		Do
 			If $cb_Func($A[$k], $pivot1) = 0 Then
-				;__swap($A, $k, $less)
+				;__ap_swap($A, $k, $less)
 				$t = $A[$k]
 				$A[$k] = $A[$less]
 				$A[$less] = $t
 				$less += 1
 			ElseIf $cb_Func($A[$k], $pivot2) = 0 Then
-				;__swap($A, $k, $great)
+				;__ap_swap($A, $k, $great)
 				$t = $A[$k]
 				$A[$k] = $A[$great]
 				$A[$great] = $t
 				$great -= 1
 				If $cb_Func($A[$k], $pivot1) = 0 Then
-					;__swap($A, $k, $less)
+					;__ap_swap($A, $k, $less)
 					$t = $A[$k]
 					$A[$k] = $A[$less]
 					$A[$less] = $t
@@ -2241,9 +2226,9 @@ Func __ArrayDualPivotQuicksort(ByRef $A, $cb_Func = Default, Const $left = 0, Co
 	EndIf
 
 	; the middle subarray
-	If $cb_Func($pivot1, $pivot2) = -1 And $great - $less > 0 Then __ArrayDualPivotQuicksort($A, $cb_Func, $less, $great, $div, $d_SmThr, $b_MedQuant, False)
+	If $cb_Func($pivot1, $pivot2) = -1 And $great - $less > 0 Then __ap_ArrayDualPivotQuicksort($A, $cb_Func, $less, $great, $div, $d_SmThr, $b_MedQuant, False)
 	Return True
-EndFunc   ;==>__ArrayDualPivotQuicksort
+EndFunc   ;==>__ap_ArrayDualPivotQuicksort
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _2Sort()
@@ -2687,5 +2672,36 @@ Func ___5Sort(Const $f, ByRef $A)
 		EndIf
 	EndIf
 EndFunc   ;==>___5Sort
+
+
+; #FUNCTION# ======================================================================================
+; Name ..........: __ap_stringCenter()
+; Description ...: helper function to print a string centered
+; Syntax ........: __ap_stringCenter($sString[, $nChars = Default])
+; Parameters ....: $sString - the string to be centered. If string is surrounded by spaces and $nchars = Default, the StringLen with spaces is used as target width
+;                  $nChars  - [optional] target width - must be > than StringLen($sString) (default:Default)
+; Return values .: Success: the centered (by surrounding spaces) string
+;                  Failure: Null and set @error to
+;                  |1: $nChars invalid value; @extended = $nChars
+; Author ........: aspirinjunkie
+; Modified ......: 2022-06-20
+; Example .......: Yes
+;                  ConsoleWrite("|" & __ap_stringCenter("test", 10) & "|" & @CRLF)
+;                  ConsoleWrite("|" & __ap_stringCenter("     test ") & "|" & @CRLF)
+; =================================================================================================
+Func __ap_stringCenter($sString, $nChars = Default)
+	If $nChars = Default Then
+		$nChars = StringLen($sString)
+	EndIf
+	$sString = StringStripWS($sString, 3)
+	Local $nString = StringLen($sString)
+
+	If $nChars < $nString Or $nChars < 1 Then Return SetError(1, $nChars, Null)
+
+	Return StringFormat("%" & Ceiling(($nChars - $nString) / 2) & "s%" & _
+			$nString & "s%" & _
+			Floor(($nChars - $nString) / 2) & "s", _
+			"", $sString, "")
+EndFunc   ;==>__ap_stringCenter
 
 #EndRegion Helper functions from Dynarray-UDF

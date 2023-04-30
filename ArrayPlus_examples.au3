@@ -1,21 +1,11 @@
 #include "ArrayPlus.au3"
 
 
-
-
-;  Global $aArray[] = [1,2,3,4,5]
-;  _Array1DTo2D($aArray, 3)
-;  _ArrayDisplay($aArray)
-
-
-
-
-
 #Region _ArrayCreate()
-;  example 1 - create 2D array inline with standard AutoIt-syntax
+;  ;  example 1 - create 2D array inline with standard AutoIt-syntax
 ;  _ArrayDisplay(_ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]"))
 
-;  ;  example 2 - create array-in-array inline with standard AutoIt-syntax but
+;  ;  example 2 - create array-in-array inline with standard AutoIt-syntax but built a array-in-array instead of a 2D-array
 ;  _ArrayDisplay(_ArrayCreate("[[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]", Default, True))
 
 ;  ;  example 3 - create array of 20 elements with standard value set to "test"
@@ -28,12 +18,12 @@
 ;  _ArrayDisplay(_ArrayCreate("2:20:0.5"))
 
 ;  ;  example 6 - create array inline with a sequence and calc the square root of every element:
-;  _ArrayDisplay(_ArrayCreate("2:20:0.5", sin))
+;  _ArrayDisplay(_ArrayCreate("2:20:0.5", sqrt))
 
 ;  ;  example 7 - number of steps instead of step size
 ;  _ArrayDisplay(_ArrayCreate("2:20|10"), "2:20|10")
 
-;  example 8 - inclusive vs. exclusive borders
+;  ;  example 8 - inclusive vs. exclusive borders
 ;  _ArrayDisplay(_ArrayCreate("0:5"), "0:5")
 ;  _ArrayDisplay(_ArrayCreate("[0:5]"), "[0:5]")
 ;  _ArrayDisplay(_ArrayCreate("(0:5"), "(0:5")
@@ -42,8 +32,8 @@
 #EndRegion _ArrayCreate()
 
 #Region _ArraySlice()
-Global $aExample1D = _ArrayRangeCreate(1, 20)
-Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
+;  Global $aExample1D = _ArrayRangeCreate(1, 20)
+;  Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]
 
 ;  ; example 1 - extract specific range from 1D-array
 ;  $aSliced = _ArraySlice($aExample1D, "5:15")
@@ -57,37 +47,37 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  $aSliced = _ArraySlice($aExample1D, "::-1")
 ;  _ArrayDisplay($aSliced, "example 3")
 
-;  example 4 - extract row #2 as 1D-Array
-;  $aSliced = _ArraySlice($aExample2D, "[:]")
+;  ; example 4 - extract row #2 as 1D-Array
+;  $aSliced = _ArraySlice($aExample2D, "[1][:]")
 ;  _ArrayDisplay($aSliced, "example 4")
 
-;  ;  example 5 - extract last row as 1D-Array
+;  ; example 5 - extract last row as 1D-Array
 ;  $aSliced = _ArraySlice($aExample2D, "[-1][:]")
 ;  _ArrayDisplay($aSliced, "example 5" )
 
-;  ;  example 6 - extract second last column as 1D-Array
+;  ; example 6 - extract second last column as 1D-Array
 ;  $aSliced = _ArraySlice($aExample2D, "[:][-2]")
 ;  _ArrayDisplay($aSliced, "example 6")
 
-;  ;  example 7 - rearrange columns and delete first row
+;  ; example 7 - rearrange columns and delete first row
 ;  $aSliced = _ArraySlice($aExample2D, "[1:][1,2,0]")
 ;  _ArrayDisplay($aSliced, "example 7")
 
-;  ;  example 8 - return 3 specific rows and invert column order:
+;  ; example 8 - return 3 specific rows and invert column order:
 ;  $aSliced = _ArraySlice($aExample2D, "[3,1,4][::-1]")
 ;  _ArrayDisplay($aSliced, "example 8")
 #EndRegion _ArraySlice()
 
 #Region __Array2String()
-;  Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 9, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
+Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 9, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
 
 ;  example 1- print 2D-array to console with header and values aligned at decimal point:
-;  ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
+ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 
-; example 2 - simple unaligned output without borders and header:
+;  ;  example 2 - simple unaligned output without borders and header:
 ;  ConsoleWrite(_Array2String($aCSVRaw, Default, " ", Default, 0))
 
-; example 3 - print 2D-array and use first row as header:
+;  ;  example 3 - print 2D-array and use first row as header:
 ;  ConsoleWrite(_Array2String($aCSVRaw, True))
 #EndRegion __Array2String()
 
@@ -100,10 +90,14 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  _ArrayDisplay($a_Array, "normal sorted array")
 
 ;  ; example 2 - natural sort of a 1D-array
-;  _ArraySortFlexible($a_Array, __MyNaturalCompare)
+;  _ArraySortFlexible($a_Array, __ap_cb_comp_Natural)
 ;  _ArrayDisplay($a_Array, "natural sorted array")
 
-;  ;  example 3 - sort 2D-array column-wise over all columns:
+;  ; example 3 - sort Array with short string based user defined comparison function:
+;  _ArraySortFlexible($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
+;  _ArrayDisplay($a_Array, "sorted")
+
+;  ;  example 4 - sort 2D-array column-wise over all columns:
 ;  ; create sample random 2D-array
 ;  Global $Array[1000][10]
 ;  For $i = 0 To 999
@@ -115,15 +109,6 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  _ArraySortFlexible($Array, _SortByColumns)
 ;  _ArrayDisplay($Array, "sorted 2D-array")
 
-;  ; Comparison function as wrapper for StrCmpLogicalW which sorts like the explorer (more intuitively if numerical values occur in the strings)
-;  Func __MyNaturalCompare(Const ByRef $A, Const ByRef $B)
-;      Local Static $h_DLL_Shlwapi = DllOpen("Shlwapi.dll")
-;      Local $a_Ret = DllCall($h_DLL_Shlwapi, "int", "StrCmpLogicalW", "wstr", $A, "wstr", $B)
-;      If @error Then Return SetError(1, @error, 0)
-;      If Not IsString($A) Or Not IsString($B) Then Return $A > $B ? 1 : $A < $B ? -1 : 0
-;      Return $a_Ret[0]
-;  EndFunc   ;==>MyCompare
-
 ;  ; own compare function which compares all columns step by step ($A/B = row 1/2 as 1D-arrays with their column values as elements)
 ;  Func _SortByColumns(ByRef $A, ByRef $B)
 ;      For $i = 0 To UBound($A) -1
@@ -132,10 +117,6 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;      Next
 ;      Return 0
 ;  EndFunc
-
-;  ; example 4 - sort Array with short string based user defined comparison function:
-;  _ArraySortFlexible($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
-;  _ArrayDisplay($Array, "sorted")
 
 #EndRegion _ArraySortFlexible()
 
@@ -162,15 +143,15 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 #Region _ArrayGetNthBiggestElement()
 ;  Global $a_Array[] = [2, 6, 8, 1, 1, 5, 8, 9, 31, 41, 163, 13, 67, 12, 74, 17, 646, 16, 74, 12, 35, 98, 12, 43]
 
-;  example 1 - get the median value without sorting the array
+;  ;  example 1 - get the median value without sorting the array
 ;  ConsoleWrite("median: " & _ArrayGetNthBiggestElement($a_Array) & @CRLF)
 ;  _ArrayDisplay($a_Array)
 
-;  example 2 - get the third highest value:
+;  ;  example 2 - get the third highest value:
 ;  ConsoleWrite("#3 highest: " & _ArrayGetNthBiggestElement($a_Array, UBound($a_Array) - 3) & @CRLF)
 ;  _ArrayDisplay($a_Array)
 
-; example 3 - get the 5 lowest elements, and sort them (should be faster than a complete sorting):
+;  ;  example 3 - get the 5 lowest elements, and sort them (should be faster than a complete sorting):
 ;  _ArrayGetNthBiggestElement($a_Array, 5)	; partition the array in one side lower than the 5th lowest value and the right side higher than this value
 ;  $a_Array = _ArraySlice($a_Array, ":4")
 ;  _ArraySort($a_Array)
@@ -235,7 +216,7 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 
 #Region _ArrayFilter()
 
-; variant 1 - filter all elements beginning with "B" by using a custom function
+;  ;  variant 1 - filter all elements beginning with "B" by using a custom function
 ;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
 ;  _ArrayFilter($a_Array, myFunc)
 ;  If Not @error Then _ArrayDisplay($a_Array)
@@ -244,7 +225,7 @@ Global $aExample2D[5][3] = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 
 ;  	Return StringLeft($A, 1) = "B"
 ;  EndFunc
 
-; variant 2 - filter all elements beginning with "B" by using a AutoIt-code inside
+;  ;  variant 2 - filter all elements beginning with "B" by using a AutoIt-code inside
 ;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
 ;  _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
 ;  If Not @error Then _ArrayDisplay($a_Array)
