@@ -5,12 +5,12 @@
 
 ; #INDEX# =======================================================================================================================
 ; Title .........: ArrayPlus-UDF
-; Version .......: 0.3
+; Version .......: 0.4
 ; AutoIt Version : 3.3.16.1
 ; Language ......: english (german maybe by accident)
 ; Description ...: advanced helpers for array handling
 ; Author(s) .....: AspirinJunkie
-; Last changed ..: 2022-12-14
+; Last changed ..: 2023-05-17
 ; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
 ; License .......: This work is free.
 ;                  You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2,
@@ -35,7 +35,8 @@
 ;  _ArrayReduce                 - reduce the elements of a array to one value with an external function
 ;  _ArrayFilter                 - filter the elements of an array with a external function
 ;  _ArrayDeleteByCondition      - delete all empty string elements or elements which fulfil a user-defined condition inside an array
-;  _ArrayDeleteMultiValues()    - removes elements that appear more than once in the string. (not only the duplicates)
+;  _ArrayDeleteMultiValues      - removes elements that appear more than once in the string. (not only the duplicates)
+;  _ArrayRotate                 - rotates the elements of a 1D-Array or the rows of a 2D-Array
 
 ;  ---- sorting ----
 ;  _ArraySortFlexible           - sort an array with a user-defined sorting rule
@@ -954,6 +955,71 @@ Func _ArrayDeleteMultiValues(ByRef $aArray)
 	Return SetExtended($iR, $aRet)
 EndFunc   ;==>_ArrayDeleteDuplicates
 
+; #FUNCTION# ====================================================================================================================
+; Name ..........: _ArrayRotate
+; Description ...: rotates the elements of a 1D-Array or the rows of a 2D-Array
+; Syntax ........: _ArrayRotate(ByRef $aArray,  $iShift)
+; Parameters ....: $aArray              - [in/out] 1D/2D-Array where the elements/rows should rotate
+;                  $iShift              - the number of elements to be shifted by
+; Return values .: Success: return true
+;                  Failure: false and set error to:
+;                  |@error = 1: wrong dimension of $aArray
+; Author ........: AspirinJunkie
+; Modified ......: 2023-05-17
+; Example .......: $aArray = _ArrayCreate("[1:20]")
+;                  _ArrayRotate($aArray, 5)
+;                  _ArrayDisplay($aArray)
+; ===============================================================================================================================
+Func _ArrayRotate(ByRef $aArray, $iShift)
+    Local $iSize = UBound($aArray)
+
+	; handle area overflows and negative shifts
+	$iShift = Mod($iShift, $iSize)
+	If $iShift < 0 Then $iShift = UBound($aArray) - Abs($iShift)
+
+	Switch UBound($aArray, 0)
+		; 1D-Array
+		Case 1
+			Local $vTemp
+
+			For $i = 1 To $iShift
+				$vTemp = $aArray[0]
+				For $j = 0 To $iSize - 2
+					$aArray[$j] = $aArray[$j + 1]
+				Next
+				$aArray[$iSize - 1] = $vTemp
+    		Next
+
+		; 2D-Array
+		Case 2
+			Local $aTmp[UBound($aArray, 2)]
+
+			For $i = 1 To $iShift
+
+				; copy first row to temp array (to do swaps):
+				For $j = 0 To UBound($aArray, 2) - 1
+					$aTmp[$j] = $aArray[0][$j]
+				Next
+
+				; reorder array
+				For $k = 0 To $iSize - 2
+					For $j = 0 To UBound($aArray, 2) - 1
+						$aArray[$k][$j] = $aArray[$k + 1][$j]
+					Next
+				Next
+
+				; readd the temp value:
+				For $j = 0 To UBound($aArray, 2) - 1
+					$aArray[$iSize - 1][$j] = $aTmp[$j]
+				Next
+    		Next
+
+		Case Else
+			Return SetError(2, UBound($aArray, 0), False)
+	EndSwitch
+
+	Return True
+EndFunc
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayReduce
