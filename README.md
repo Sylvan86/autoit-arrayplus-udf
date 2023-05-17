@@ -24,6 +24,7 @@ The function list of the UDF:
 |_ArrayFilter               | filter the elements of an array with a external function |
 |_ArrayDeleteByCondition    | delete all empty string elements or which fulfil a user-defined condition inside an array |
 |_ArrayDeleteMultiValues()  | removes elements that appear more than once in the string. (not only the duplicates) |
+|_ArrayRotate               | rotates the elements of a 1D-Array or the rows of a 2D-Array |
 | ***sorting*** |
 |_ArraySortFlexible         | sort an array with a user-defined sorting rule |
 |_ArraySortInsertion        | sort an array with a user-defined sorting rule with the insertion-sort algorithm |
