@@ -122,21 +122,20 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 
 
 #Region _ArrayBinarySearchFlex()
-;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
-;  _ArraySortFlexible($a_Array)
+;~ Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
+;~ _ArraySortFlexible($a_Array)
 
-;  ;  example 1 - search all values starting with "B"
-;  $a_Founds = _ArrayBinarySearchFlex($a_Array, _myCompare, "B")
-;  If Not @error Then _ArrayDisplay($a_Founds)
+;~ ;  example 1 - search all values starting with "B"
+;~ $a_Founds = _ArrayBinarySearchFlex($a_Array, "B", _myCompare)
+;~ If Not @error Then _ArrayDisplay($a_Founds)
 
-;  Func _myCompare(Const $sS, Const $sO)
-;  	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
-;  EndFunc   ;==>_myCompare
+;~ Func _myCompare(Const $sS, Const $sO)
+;~ 	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
+;~ EndFunc   ;==>_myCompare
 
-;  ; example 2 - variant with string as user defined function:
-;  $a_Founds = _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
-;  If Not @error Then _ArrayDisplay($a_Founds)
-
+;~ ; example 2 - variant with string as user defined function:
+;~ $a_Founds = _ArrayBinarySearchFlex($a_Array, "", "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
+;~ If Not @error Then _ArrayDisplay($a_Founds)
 #EndRegion _ArrayBinarySearchFlex()
 
 

@@ -1574,6 +1574,7 @@ EndFunc   ;==>_ArrayIsSorted
 ; Description ...: performs a binary search for an appropriately sorted array using an individual comparison function
 ; Syntax ........: _ArrayBinarySearchFlex(ByRef $A, $cb_Func, $sS, [$iMi = 0, [$iMa = UBound($A) - 1]])
 ; Parameters ....: $a_Array       - The sorted array to search in
+;                  $vSearch       - The search value to be searched for in the array
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   The function has two tasks:
 ;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
@@ -1581,7 +1582,6 @@ EndFunc   ;==>_ArrayIsSorted
 ;                                   the first parameter a value can be passed to the function through $sS to make it more dynamic.
 ;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
 ;                                   example: _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
-;                  $sS          - a value to be passed to $cb_Func to make it more dynamic
 ;                  $iMi         - the start index of the search area
 ;                  $iMa         - the end index of the search area
 ; Return values .: Success:     Array with matches + index of first match in @extended
@@ -1604,9 +1604,9 @@ EndFunc   ;==>_ArrayIsSorted
 ;                  	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
 ;                  EndFunc   ;==>_myCompare
 ; =================================================================================================
-Func _ArrayBinarySearchFlex(ByRef $A, $cb_Func, $sS = Default, $iMi = 0, $iMa = UBound($A) - 1)
+Func _ArrayBinarySearchFlex(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, $iMi = 0, $iMa = UBound($A) - 1)
 	Local $i, $e, $bCbIsString = False
-	Local $aP[3] = ['CallArgArray', $sS]
+	Local $aP[3] = ['CallArgArray', $vSearch]
 
 	If Not IsArray($A) Then Return SetError(3)
 
