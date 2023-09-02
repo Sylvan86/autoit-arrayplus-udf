@@ -5,13 +5,13 @@
 
 ; #INDEX# =======================================================================================================================
 ; Title .........: ArrayPlus-UDF
-; Version .......: 0.4
+; Version .......: 0.5
 ; AutoIt Version : 3.3.16.1
 ; Language ......: english (german maybe by accident)
 ; Description ...: advanced helpers for array handling
 ; Author(s) .....: AspirinJunkie
-; Last changed ..: 2023-05-17
-; Link ..........: https://autoit.de/thread/87723-arrayplus-udf-weitere-helferlein-für-den-täglichen-umgang-mit-arrays
+; Last changed ..: 2023-09-02
+; Link ..........: https://github.com/Sylvan86/autoit-arrayplus-udf
 ; License .......: This work is free.
 ;                  You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2,
 ;                  as published by Sam Hocevar.
@@ -45,9 +45,11 @@
 ;  _ArrayIsSorted               - checks whether an Array is already sorted (by using a user comparison function)
 ;  _ArrayHeapSortBinary         - sort an array with Binary-Min-Heap-Sort algorithm (by using a user comparison function)
 ;  _ArrayHeapSortTernary        - sort an array with Ternary-Min-Heap-Sort algorithm (by using a user comparison function)
+;  _ArrayMergeSorted            - merges a sorted array or one value into a sorted array so that the sorting is preserved
 
 ;  ---- searching ----
 ;  _ArrayBinarySearchFlex       - performs a binary search for an appropriately sorted array using an individual comparison function
+;  _ArrayFindSortedPos          - find the insertion position of an element in a sorted array.
 ;  _ArrayGetMax                 - determine the element with the maximum value by using a user comparison function
 ;  _ArrayGetMin                 - determine the element with the minimum value by using a user comparison function
 ;  _ArrayMinMax                 - returns min and max value and their indices of a 1D array or all/specific column of a 2D array
@@ -1670,6 +1672,79 @@ Func _ArrayBinarySearchFlex(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, 
 EndFunc   ;==>_ArrayBinarySearchFlex
 
 ; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayFindSortedPos
+; Description ...: Finds the insertion position of an element in a sorted array. Quite similar to BinarySearchFlex, but this finds only existing elements.
+; Syntax ........: _ArrayFindSortedPos(ByRef $A, $vSearch, [$cb_Func = __ap_cb_comp_Normal, [$iMi = 0, [$iMa = UBound($A) - 1]]])
+; Parameters ....: $A           - The sorted array to search in
+;                  $vSearch     - the search value
+;                  $cb_Func     - function variable points to a function of a form "[1|0|-1] function(value, value)"
+;                                 The function has two tasks:
+;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
+;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
+;                                 the first parameter a value can be passed to the function through $sS to make it more dynamic.
+;  								  If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;                                 example: _ArrayFindSortedPos($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
+;                                 default value is standard AutoIt variable comparison
+;                  $iMi         - the start index of the search area
+;                  $iMa         - the end index of the search area
+; Return values .: Success:    Insertion index of $vSearch and set
+;                              @extended = 1 if $vSearch already exists in $A
+;                              @extended = 2 if insertion index is bigger than size of $A
+;                  Failure:    Null and set @error to
+;                     @error = 1: $A is not an array
+;                              2: invalid value for $iMi
+;                              3: invalid value for $iMa
+;                              4: $iMa < $iMi
+;                              5: invalid value for $cb_Func (no function)
+;                              6: invalid return value of $cb_Func
+; Author ........: AspirinJunkie
+; =================================================================================================
+Func _ArrayFindSortedPos(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, $iMi = 0, $iMa = UBound($A) - 1)
+	Local $i, $e, $bCbIsString = False
+	Local $aP[3] = ['CallArgArray', $vSearch]
+
+	If Not IsArray($A) Then Return SetError(1, 0, Null)
+
+	If Not IsInt($iMi) Or $iMi < 0 Or $iMi >= UBound($A) Then Return SetError(2, $iMi, Null)
+	If Not IsInt($iMa) Or $iMa < 0 Or $iMa >= UBound($A) Then Return SetError(3, $iMa, Null)
+	If $iMa < $iMi Then Return SetError(4, 0, Null)
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+
+	If Not IsFunc($cb_Func) Then Return SetError(5, 0, Null)
+
+	While $iMi <= $iMa
+		$i = Floor(($iMa + $iMi) / 2)
+		$e = $A[$i]
+		$aP[2] = $e
+
+		Switch Call($cb_Func, $aP)
+			Case 0 ; match!
+				Return Setextended(1, $i)
+			Case -1
+				$aP[2] = $A[($i=0 ? 0 : $i-1)]
+				If Call($cb_Func, $aP) >= 0 Then Return $i
+				$iMa = $i - 1
+			Case 1
+				If $i >= UBound($A) -1 Then Return SetExtended(2, $i + 1)
+				$aP[2] = $A[$i+1]
+				If Call($cb_Func, $aP) <= 0 Then Return $i + 1
+				$iMi = $i + 1
+			Case Else
+				Return SetError(6, 0 , Null)
+		EndSwitch
+	WEnd
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
+EndFunc    ;==>_ArrayFindSortedPos
+
+; #FUNCTION# ======================================================================================
 ; Name ..........: _ArraySortInsertion
 ; Description ...: sort an array with a user-defined sorting rule with the insertion-sort algorithm
 ; Syntax ........:_ArraySortInsertion(ByRef $A, [$cb_Func = Default, [Const $i_Min = 0, [Const $i_Max = UBound($a_Array) - 1,{Const $b_First = True}]]])
@@ -1963,6 +2038,117 @@ Func _ArrayHeapSortTernary(ByRef $A, $cb_Func = Default, $iMax = UBound($A) - 1)
 	Return True
 EndFunc   ;==>_ArrayHeapSortTernary
 
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayMergeSorted
+; Description ...: merges a sorted array or one value into a sorted array so that the sorting is preserved
+; Syntax ........: _ArrayMergeSorted(ByRef $aMain, $aAdd, $cb_Func = __ap_cb_comp_Normal)
+; Parameters ....: $aMain       - The sorted array to which the elements are to be added (1D or 2D)
+;                  $aAdd        - The values to be added (single value, 1D-array or 2D-array)
+;                  $cb_Func     - function variable points to a function of a form "[1|0|-1] function(value, value)"
+;                                 The function has two tasks:
+;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
+;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
+;                                 the first parameter a value can be passed to the function through $sS to make it more dynamic.
+;  								  If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;                                 default value is standard AutoIt variable comparison
+; Return values .: Success:    Return True
+;                  Failure:    False and set @error to
+;                     @error = 1: $aMain or $aAdd is an array (@extended = 1: $aMain, @extended = 2: $aAdd)
+;                              2: $aMain is not an array
+;                              3: $aMain is empty
+;                              4: $aMain has more than 2 dimensions
+;                              5: error during _ArrayFindSortedPos (see @extended for error-code)
+;                              6: $aAdd is empty
+;                              7: $aAdd has more than 2 dimensions
+;                              8: error during _ArrayFindSortedPos (see @extended for error-code)
+; Author ........: AspirinJunkie
+; example .......: $aMain = _ArrayCreate("2:200:2")
+;                  $aAdd[] = [1, 81, 101, 161, 201]
+;
+;                  _ArrayDisplay($aMain, "Array before")
+;                  _ArrayMergeSorted($aMain, $aAdd)
+;                  _ArrayDisplay($aMain, "Array after merge")
+; =================================================================================================
+Func _ArrayMergeSorted(ByRef $aMain, $aAdd, $cb_Func = __ap_cb_comp_Normal)
+	Local $b2D = False, $bCbIsString = False
+
+	If IsString($cb_Func) Then ; comparison function directly as a string
+		Local $bBefore = Opt("ExpandEnvStrings", 1)
+		$sAPLUS_CBSTRING = $cb_Func
+		$cb_Func = __ap_cb_comp_String
+		$bCbIsString = True
+	EndIf
+
+	; input checks
+	; only arrays are supported
+	If IsMap($aMain) Or IsMap($aAdd) Then Return SetError(1, IsMap($aMain) ? 1 : 2, False)
+	; check array and the dims
+	Switch UBound($aMain, 0)
+		Case 0 ; $aMain is no array
+			Return SetError(2, UBound($aMain, 0), False)
+		Case 1 ; $aMain = 1D-array, ok when at least 1 element
+			If UBound($aMain, 1) < 1 Then Return SetError(3, UBound($aMain, 1), False)
+		Case 2 ; $aMain = 2D-array, we have to convert it to array-in-array for easier handling
+			$aMain = _Array2dToAinA($aMain)
+			$b2D = True
+		Case Else ; $aMain is array with more than 2 dims - not supported
+			Return SetError(4, UBound($aMain, 0), False)
+	EndSwitch
+	; checks for $aAdd
+	Switch UBound($aAdd, 0)
+		Case 0 ; $aMain is no array
+			; scalar value
+			Local $iPos = _ArrayFindSortedPos($aMain, $aAdd, $cb_Func)
+			If @error Then Return SetError(5, @error, False)
+
+			Redim $aMain[UBound($aMain) + 1]
+			For $i = UBound($aMain) - 1 To ($iPos < 1 ? 1 : $iPos) Step -1
+				$aMain[$i] = $aMain[$i - 1]
+			Next
+			$aMain[$iPos] = $aAdd
+
+		Case 1 ; $aAdd = 1D-array, ok when at least 1 element
+			If UBound($aAdd, 1) < 1 Then Return SetError(6, UBound($aAdd, 1), False)
+
+		Case 2 ; 2D-array, we have to convert it to array-in-array for easier handling
+			$aAdd = _Array2dToAinA($aAdd)
+			$b2D = True
+
+		Case Else ; $aAdd is array with more than 2 dims - not supported
+			Return SetError(7, UBound($aAdd, 0), False)
+
+	EndSwitch
+
+	If IsArray($aAdd) Then
+		; find position of first element
+		Local $iPos = _ArrayFindSortedPos($aMain, $aAdd[0], $cb_Func)
+		If @error Then Return SetError(8, @error, False)
+
+		Redim $aMain[UBound($aMain) + UBound($aAdd)]
+		Local $iAdd = UBound($aAdd)
+		Local $aP[3] = ['CallArgArray', "", $aAdd[$iAdd - 1]]
+
+		; from end to insert pos of first element: move the elements and insert new elements
+		For $i = UBound($aMain) - 1 To ($iPos < 1 ? 1 : $iPos) Step -1
+			$aMain[$i] = $aMain[$i - $iAdd]
+			$aP[1] = $aMain[$i]
+
+			If Call($cb_Func, $aP) < 0 Then
+				$aMain[$i] = $aAdd[$iAdd - 1]
+				$iAdd -= 1
+				$aP[2] = $aAdd[$iAdd - 1]
+			EndIf
+		Next
+		$aMain[$iPos] = $aAdd[0]
+	EndIf
+
+	; back to 2D-array
+	If $b2D Then _ArrayAinATo2d($aMain)
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
+	Return True
+EndFunc
+
 #EndRegion
 
 #Region Helper functions
@@ -1978,8 +2164,8 @@ EndFunc   ;==>_ArrayHeapSortTernary
 ;                  -1: a < b
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func __ap_cb_comp_Normal(ByRef Const $A, ByRef Const $b)
-	Return $A > $b ? 1 : $A = $b ? 0 : -1
+Func __ap_cb_comp_Normal(ByRef Const $A, ByRef Const $B)
+	Return $A > $B ? 1 : $A = $B ? 0 : -1
 EndFunc   ;==>__ap_cb_comp_Normal
 
 ; #FUNCTION# ======================================================================================
