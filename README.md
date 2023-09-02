@@ -32,8 +32,10 @@ The function list of the UDF:
 |_ArrayIsSorted             | checks whether an Array is already sorted (by using a user comparison function) |
 |_ArrayHeapSortBinary       | sort an array with Binary-Min-Heap-Sort algorithm (by using a user comparison function) |
 |_ArrayHeapSortTernary      | sort an array with Ternary-Min-Heap-Sort algorithm (by using a user comparison function) |
+|_ArrayMergeSorted          | merges a sorted array or one value into a sorted array so that the sorting is preserved |
 | ***searching*** |
 |_ArrayBinarySearchFlex     | performs a binary search for an appropriately sorted array using an individual comparison function |
+| _ArrayFindSortedPos       | find the insertion position of an element in a sorted array. |
 |_ArrayGetMax               | determine the element with the maximum value by using a user comparison function |
 |_ArrayGetMin               | determine the element with the minimum value by using a user comparison function |
 |_ArrayMinMax               | returns min and max value and their indices of a 1D array or all/specific column of a 2D array |
@@ -192,15 +194,15 @@ Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "P
 _ArraySortFlexible($a_Array)
 
 ;  example 1 - search all values starting with "B"
-$a_Founds = _ArrayBinarySearchFlex($a_Array, _myCompare, "B")
+$a_Founds = _ArrayBinarySearchFlex($a_Array, "B", _myCompare)
 If Not @error Then _ArrayDisplay($a_Founds)
 
 Func _myCompare(Const $sS, Const $sO)
-    Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
+	Return StringRegExp($sO, '^' & $sS) = 1 ? 0 : -StringCompare($sO, $sS)
 EndFunc   ;==>_myCompare
 
 ; example 2 - variant with string as user defined function:
-$a_Founds = _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
+$a_Founds = _ArrayBinarySearchFlex($a_Array, "", "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
 If Not @error Then _ArrayDisplay($a_Founds)
 ```
 
