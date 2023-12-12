@@ -862,7 +862,7 @@ Func _ArrayFilter(ByRef $a_Array, $cb_Func, Const $b_Withcount = False, Const $b
 		If $b_Withcount Then $a_Ret[0] = $d_x - 1
 		If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
 		ReDim $a_Ret[$d_x]
-		If $2D Then $a_Array = _ArrayAinATo2d($a_Ret)
+		If $2D Then $a_Ret = _ArrayAinATo2d($a_Ret)
 		Return SetExtended($d_x, $a_Ret)
 	EndIf
 EndFunc   ;==>_ArrayFilter
