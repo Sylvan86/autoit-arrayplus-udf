@@ -1701,7 +1701,6 @@ EndFunc   ;==>_ArrayBinarySearchFlex
 ; =================================================================================================
 Func _ArrayFindSortedPos(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, $iMi = 0, $iMa = UBound($A) - 1)
 	Local $i, $e, $bCbIsString = False
-	Local $aP[3] = ['CallArgArray', $vSearch]
 
 	If Not IsArray($A) Then Return SetError(1, 0, Null)
 
@@ -1721,19 +1720,16 @@ Func _ArrayFindSortedPos(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, $iM
 	While $iMi <= $iMa
 		$i = Floor(($iMa + $iMi) / 2)
 		$e = $A[$i]
-		$aP[2] = $e
 
-		Switch Call($cb_Func, $aP)
+		Switch $cb_Func($vSearch, $e)
 			Case 0 ; match!
 				Return Setextended(1, $i)
 			Case -1
-				$aP[2] = $A[($i=0 ? 0 : $i-1)]
-				If Call($cb_Func, $aP) >= 0 Then Return $i
+				If $cb_Func($vSearch, $A[($i=0 ? 0 : $i-1)]) >= 0 Then Return $i
 				$iMa = $i - 1
 			Case 1
 				If $i >= UBound($A) -1 Then Return SetExtended(2, $i + 1)
-				$aP[2] = $A[$i+1]
-				If Call($cb_Func, $aP) <= 0 Then Return $i + 1
+				If $cb_Func($vSearch, $A[$i+1]) <= 0 Then Return $i + 1
 				$iMi = $i + 1
 			Case Else
 				Return SetError(6, 0 , Null)
