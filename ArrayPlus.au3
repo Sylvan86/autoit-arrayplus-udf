@@ -2060,7 +2060,6 @@ EndFunc   ;==>_ArrayHeapSortTernary
 ;                              5: error during _ArrayFindSortedPos (see @extended for error-code)
 ;                              6: $aAdd is empty
 ;                              7: $aAdd has more than 2 dimensions
-;                              8: error during _ArrayFindSortedPos (see @extended for error-code)
 ; Author ........: AspirinJunkie
 ; example .......: $aMain = _ArrayCreate("2:200:2")
 ;                  $aAdd[] = [1, 81, 101, 161, 201]
@@ -2120,26 +2119,29 @@ Func _ArrayMergeSorted(ByRef $aMain, $aAdd, $cb_Func = __ap_cb_comp_Normal)
 	EndSwitch
 
 	If IsArray($aAdd) Then
-		; find position of first element
-		Local $iPos = _ArrayFindSortedPos($aMain, $aAdd[0], $cb_Func)
-		If @error Then Return SetError(8, @error, False)
+		Local $nElA = UBound($aMain), $nElB = UBound($aAdd)
+		ReDim $aMain[$nElA + $nElB] ; add size of $aAdd to $aMain to hold all elements
 
-		Redim $aMain[UBound($aMain) + UBound($aAdd)]
-		Local $iAdd = UBound($aAdd)
-		Local $aP[3] = ['CallArgArray', "", $aAdd[$iAdd - 1]]
-
-		; from end to insert pos of first element: move the elements and insert new elements
-		For $i = UBound($aMain) - 1 To ($iPos < 1 ? 1 : $iPos) Step -1
-			$aMain[$i] = $aMain[$i - $iAdd]
-			$aP[1] = $aMain[$i]
-
-			If Call($cb_Func, $aP) < 0 Then
-				$aMain[$i] = $aAdd[$iAdd - 1]
-				$iAdd -= 1
-				$aP[2] = $aAdd[$iAdd - 1]
-			EndIf
+		; Sort the elements from back to front according to their order
+		Local $i = $nElA - 1, $j = $nElB - 1
+		For $k = $nElA + $nElB - 1 To 0 Step - 1
+    	    If $cb_Func($aMain[$i], $aAdd[$j]) = 1 Then
+    	        $aMain[$k] = $aMain[$i]
+    	        $i -= 1
+				If $i < 0 Then ExitLoop
+    	    Else
+    	        $aMain[$k] = $aAdd[$j]
+    	        $j -= 1
+				If $j < 0 Then ExitLoop
+    	    EndIf
 		Next
-		$aMain[$iPos] = $aAdd[0]
+
+		; add remaining elements of $aAdd if existing
+		$k -= 1
+		For $j = $j To 0 Step - 1
+			$aMain[$k] = $aAdd[$j]
+		Next
+
 	EndIf
 
 	; back to 2D-array
