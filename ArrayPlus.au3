@@ -807,15 +807,14 @@ EndFunc   ;==>_ArrayMap
 ;  								    If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
 ;                                   example: _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
-;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_EndIndex    - the end index until the elements should be processed
-; Return values .: Success: $b_Overwrite=True: True; Else: the filtered array
+; Return values .: Success: the filtered array
 ;                  Failure: False
 ;                     @error = 1: $a_Array is'nt an array
 ;                              5: invalid value for $d_EndIndex
 ; Author ........: AspirinJunkie
 ; =================================================================================================
-Func _ArrayFilter(ByRef $a_Array, $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, $d_EndIndex = Default)
+Func _ArrayFilter($a_Array, $cb_Func, Const $b_Withcount = False, $d_EndIndex = Default)
 	If Not IsArray($a_Array) Then Return SetError(1, 0, False)
 	Local Const $w = UBound($a_Array)
 	Local $d_Start = Int(Not ($b_Withcount = False))
@@ -839,32 +838,19 @@ Func _ArrayFilter(ByRef $a_Array, $cb_Func, Const $b_Withcount = False, Const $b
 		$bCbIsString = True
 	EndIf
 
-	If $b_Overwrite Then
-		For $i = $d_Start To $d_EndIndex
-			If $cb_Func($a_Array[$i]) Then
-				If $i > $d_x Then $a_Array[$d_x] = $a_Array[$i]
-				$d_x += 1
-			EndIf
-		Next
-		If $b_Withcount Then $a_Array[0] = $d_x - 1
-		If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
-		ReDim $a_Array[$d_x]
-		If $2D Then $a_Array = _ArrayAinATo2d($a_Array)
-		Return SetExtended($d_x, True)
-	Else
-		Local $a_Ret[$w]
-		For $i = $d_Start To $d_EndIndex
-			If $cb_Func($a_Array[$i]) Then
-				$a_Ret[$d_x] = $a_Array[$i]
-				$d_x += 1
-			EndIf
-		Next
-		If $b_Withcount Then $a_Ret[0] = $d_x - 1
-		If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
-		ReDim $a_Ret[$d_x]
-		If $2D Then $a_Array = _ArrayAinATo2d($a_Array)
-		Return SetExtended($d_x, $a_Ret)
-	EndIf
+	Local $a_Ret[$w]
+	For $i = $d_Start To $d_EndIndex
+		If $cb_Func($a_Array[$i]) Then
+			$a_Ret[$d_x] = $a_Array[$i]
+			$d_x += 1
+		EndIf
+	Next
+	If $b_Withcount Then $a_Ret[0] = $d_x - 1
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+	ReDim $a_Ret[$d_x]
+	If $2D Then $a_Ret = _ArrayAinATo2d($a_Ret)
+
+	Return SetExtended($d_x, $a_Ret)
 EndFunc   ;==>_ArrayFilter
 
 ; #FUNCTION# ======================================================================================
