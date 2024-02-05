@@ -1608,7 +1608,6 @@ EndFunc   ;==>_ArrayIsSorted
 ; =================================================================================================
 Func _ArrayBinarySearchFlex(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, $iMi = 0, $iMa = UBound($A) - 1)
 	Local $i, $e, $bCbIsString = False
-	Local $aP[3] = ['CallArgArray', $vSearch]
 
 	If Not IsArray($A) Then Return SetError(3)
 
@@ -1628,25 +1627,22 @@ Func _ArrayBinarySearchFlex(ByRef $A, $vSearch, $cb_Func = __ap_cb_comp_Normal, 
 	While $iMi <= $iMa
 		$i = Floor(($iMa + $iMi) / 2)
 		$e = $A[$i]
-		$aP[2] = $e
 
-		Switch Call($cb_Func, $aP)
+		Switch $cb_Func($vSearch, $e)
 			Case 0 ; match!
 				; now lookaround to see if there are more matches
 				$iMi = $i
 				Do
 					$iMi -= 1
 					If $iMi < 0 Then ExitLoop
-					$aP[2] = $A[$iMi]
-				Until Call($cb_Func, $aP) <> 0
+				Until $cb_Func($vSearch, $A[$iMi]) <> 0
 				$iMi += 1
 
 				$iMa = $i
 				Do
 					$iMa += 1
 					If $iMa >= UBound($A) Then ExitLoop
-					$aP[2] = $A[$iMa]
-				Until Call($cb_Func, $aP) <> 0
+				Until $cb_Func($vSearch, $A[$iMa]) <> 0
 				$iMa -= 1
 
 				; build return array
