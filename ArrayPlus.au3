@@ -740,7 +740,7 @@ EndFunc   ;==>_ArrayAinATo2d
 ; Syntax ........: _ArrayMap(ByRef $a_Array, Const $cb_Func, Const $b_Withcount = False, Const $b_Overwrite = True, Const $b_CBWithIndex = False, $d_EndIndex = Default)
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form function($value) or if $b_CBWithIndex: function($value, $index)
-;  								    If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code. The variable name for the current element should be named "$A"  inside the code
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_CBWithIndex - If true: $cb_Func has the form "function(element-value, element-index)"
@@ -804,7 +804,7 @@ EndFunc   ;==>_ArrayMap
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form function($value)
 ;                                   the function return True for the elements which should retain in the array
-;  								    If string then the value is parsed as AutoIt-Code. The variable name for the current element should be named "$A"  inside the code
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code. The variable name for the current element should be named "$A"  inside the code
 ;                                   example: _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_EndIndex    - the end index until the elements should be processed
@@ -860,7 +860,7 @@ EndFunc   ;==>_ArrayFilter
 ; Parameters ....: $a_Array       - the array where the elements should get deleted
 ;                  $cb_Func       - function variable points to a function of a form function($value)
 ;                                   the function return True for the elements which should get deleted from the array
-;                                   If string then the value is parsed as AutoIt-Code.
+;                                   If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
 ;                                   The value inside the code for the current element should be named "$A"
 ;                                   example: _ArrayDeleteByCondition($a_Array, 'StringLeft($A, 1) = "B"')
 ; Return values .: -
@@ -1167,7 +1167,8 @@ EndFunc   ;==>_ArrayGetMin
 ;                  $iColumn      - [optional] If 2D-array: the column whose min/max values are to be determined. (default:Default)
 ;                  |If Default and $aArray = 2D-array: Min/Max-values/indices for every column
 ;                  $cbFunc      - [optional] function variable points to a function of a form "[1|0|-1] function(value, value)" (default:Default)
-;                                   If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;                                  If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                  The both values for comparison should be named "$A" and "$B"
 ;                  |the function compares two values a,and b for a>b/a=b/a<b
 ;                  |an example is the AutoIt-Function "StringCompare".
 ; Return values .: Success: min/max values and their indices
@@ -1323,7 +1324,8 @@ EndFunc   ;==>_ArrayMinMax
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   if $cb_Func = Defaul the normal AutoIt-datatype-comparison is used
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ; Return values .: the value of the nth biggest value
 ; Author ........: AspirinJunkie
 ; =================================================================================================
@@ -1399,7 +1401,8 @@ EndFunc   ;==>_ArrayGetNthBiggestElement
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
-;                                   If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;                                   If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;  								       example: _ArraySortFlexible($a_Array, "StringCompare($A, $B)")
 ;                                               _ArraySortFlexible($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
@@ -1512,7 +1515,8 @@ EndFunc   ;==>_ArraySortFlexible
 ; Parameters ....: $a_Array       - the "semi-dynamic"-Array (needs an array with number of elements in $a_Array[0])
 ;                  $cb_Func       - function variable points to a function of a form "function(ByRef Reduced-Value, value)"
 ;                                   the function incrementally change the ReduceValue with the values
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;                  $b_Withcount   - Set true if the number of elements are written in the first element of $a_Array
 ;                  $b_Overwrite   - If true: $a_Array gets overwritten; If false: no changes to $a_Array - new array will returned
 ;                  $b_EndIndex    - the end index until the elements should be processed
@@ -1568,7 +1572,8 @@ EndFunc   ;==>_ArrayIsSorted
 ;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
 ;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
 ;                                   the first parameter a value can be passed to the function through $sS to make it more dynamic.
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
 ;                                   example: _ArrayBinarySearchFlex($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
 ;                  $iMi         - the start index of the search area
 ;                  $iMa         - the end index of the search area
@@ -1664,7 +1669,8 @@ EndFunc   ;==>_ArrayBinarySearchFlex
 ;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
 ;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
 ;                                 the first parameter a value can be passed to the function through $sS to make it more dynamic.
-;  								  If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;  								  If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                 The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
 ;                                 example: _ArrayFindSortedPos($a_Array, "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
 ;                                 default value is standard AutoIt variable comparison
 ;                  $iMi         - the start index of the search area
@@ -1731,7 +1737,8 @@ EndFunc    ;==>_ArrayFindSortedPos
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;                                   example: _ArraySortInsertion($a_Array, "StringCompare($A, $B)")
 ;                                            _ArraySortInsertion($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
@@ -1786,7 +1793,8 @@ EndFunc   ;==>_ArraySortInsertion
 ;                  $cb_Func       - function variable points to a function of a form "[1|0|-1] function(value, value)"
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;                                   example: _ArraySortSelection($a_Array, "StringCompare($A, $B)")
 ;                                            _ArraySortSelection($a_Array, "$A > $B ? 1 : $A < $B ? -1 : 0")
 ;                  $i_Min         - the start index for the sorting range in the array
@@ -1856,7 +1864,8 @@ EndFunc   ;==>_ArraySortSelection
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;                  $iMax          - the end index until the array should get sorted
 ; Return values .: Success: True  - array is sorted now
 ;                  Failure: False
@@ -1928,7 +1937,8 @@ EndFunc   ;==>_ArrayHeapSortBinary
 ;                                   the function compares two values a,and b for a>b/a=b/a<b
 ;                                   an example is the AutoIt-Function "StringCompare".
 ;                                   If the default value is used this functions gets only a wrapper for the optimized _ArraySort()-function
-;  								    If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B"
+;  								    If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                   The both values for comparison should be named "$A" and "$B"
 ;                  $iMax          - the end index until the array should get sorted
 ; Return values .: Success: True  - array is sorted now
 ;                  Failure: False
@@ -2027,7 +2037,8 @@ EndFunc   ;==>_ArrayHeapSortTernary
 ;                                     * Check whether the second parameter corresponds to a defined pattern (then ret value = 0).
 ;                                     * Check whether a pattern searched for would be greater or smaller than the second parameter.
 ;                                 the first parameter a value can be passed to the function through $sS to make it more dynamic.
-;  								  If string then the value is parsed as AutoIt-Code. The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
+;  								  If string then the value is treated as a lambda function in that it is parsed as AutoIt code.
+;                                 The both values for comparison should be named "$A" and "$B", where $A = $sS and $B is the current element for comparison
 ;                                 default value is standard AutoIt variable comparison
 ; Return values .: Success:    Return True
 ;                  Failure:    False and set @error to
