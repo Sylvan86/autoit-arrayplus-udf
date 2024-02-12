@@ -69,10 +69,10 @@
 #EndRegion _ArraySlice()
 
 #Region __Array2String()
-Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 9, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
+;~ Global $aCSVRaw[5][4] = [[1, 2, 20.65, 3], [4, 5, 9, 6], [7, 8, 111111111.8, 9], [10, 11, 100.2, 12], [13, 14, 23.765, 15]]
 
 ;  example 1- print 2D-array to console with header and values aligned at decimal point:
-ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
+;~ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 
 ;  ;  example 2 - simple unaligned output without borders and header:
 ;  ConsoleWrite(_Array2String($aCSVRaw, Default, " ", Default, 0))
@@ -120,7 +120,6 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 
 #EndRegion _ArraySortFlexible()
 
-
 #Region _ArrayBinarySearchFlex()
 ;~ Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
 ;~ _ArraySortFlexible($a_Array)
@@ -137,7 +136,6 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ;~ $a_Founds = _ArrayBinarySearchFlex($a_Array, "", "StringRegExp($B, '^B') = 1 ? 0 : -StringCompare('B', $B)")
 ;~ If Not @error Then _ArrayDisplay($a_Founds)
 #EndRegion _ArrayBinarySearchFlex()
-
 
 #Region _ArrayGetNthBiggestElement()
 ;  Global $a_Array[] = [2, 6, 8, 1, 1, 5, 8, 9, 31, 41, 163, 13, 67, 12, 74, 17, 646, 16, 74, 12, 35, 98, 12, 43]
@@ -170,7 +168,6 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ;  EndFunc
 #EndRegion _ArrayReduce()
 
-
 #Region _ArrayMinMax()()
 ; example 1 - 1D-Array
 ;  Global $aArray1D[30]
@@ -194,7 +191,6 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ;  _ArrayDisplay($aMinMax)
 #endRegion
 
-
 #Region _ArrayDeleteByCondition()
 
 ;  ; variant 1 - delete all elements, which begin with "B" by using a custom function:
@@ -211,7 +207,6 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ;  _ArrayDeleteByCondition($a_Array, 'StringLeft($A, 1) = "B"')
 ;  If Not @error Then _ArrayDisplay($a_Array)
 #endRegion
-
 
 #Region _ArrayFilter()
 
@@ -230,3 +225,19 @@ ConsoleWrite(_Array2String($aCSVRaw, "Col. 1, Col. 2, Col. 3, Col. 4"))
 ;  If Not @error Then _ArrayDisplay($a_Array)
 
 #endRegion
+
+#Region _ArrayJoin()
+
+;~ Global $aProds[][3] = [["apple", 1.5, "fruits"], ["Pancake", 3.0, "sweets"], ["banana", 2.0, "fruits"], ["banana", 1.0, "plastic"], ["cherry", 3.0, "fruits"], ["strawberry", 2.5, "fruits"], ["tomato", 1.0, "vegetables"], ["cucumber", 1.2, "vegetables"], ["carrot", 0.8, "vegetables"], ["potato", 1.3, "vegetables"], ["chocolate", 2.0, "sweets"], ["ice cream", 3.5, "sweets"]]
+
+;~ Global $aColors[][2] = [["apple", "red"], ["coconut", "brown"], ["banana", "yellow"], ["banana", "brown"], ["cherry", "red"], ["strawberry", "red"], ["tomato", "red"], ["cucumber", "green"], ["carrot", "orange"], ["potato", "brown"], ["chocolate", "brown"], ["ice cream", "white"]]
+
+;~ ; full outer join by first value of both arrays
+;~ $aJoin = _ArrayJoin($aProds, $aColors, 0, 0, "outer")
+;~ _ArrayDisplay($aJoin, "by first value")
+
+;~ ; join using the first letter of first value in both arrays
+;~ $aJoin = _ArrayJoin($aProds, $aColors, "StringLeft($A[0], 1)")
+;~ _ArrayDisplay($aJoin, "by first letter")
+
+#EndRegion

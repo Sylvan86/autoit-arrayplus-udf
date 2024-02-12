@@ -5,12 +5,12 @@
 
 ; #INDEX# =======================================================================================================================
 ; Title .........: ArrayPlus-UDF
-; Version .......: 0.5
+; Version .......: 0.6
 ; AutoIt Version : 3.3.16.1
 ; Language ......: english (german maybe by accident)
 ; Description ...: advanced helpers for array handling
 ; Author(s) .....: AspirinJunkie
-; Last changed ..: 2023-09-02
+; Last changed ..: 2024-02-12
 ; Link ..........: https://github.com/Sylvan86/autoit-arrayplus-udf
 ; License .......: This work is free.
 ;                  You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2,
@@ -31,6 +31,7 @@
 ;  _ArrayAinATo2d               - convert array-in-array into a 2D array
 ;  _Array2String                - print a 1D/2D-array to console or variable clearly arranged
 ;  _ArrayAlignDec               - align a 1D-array or a column of a 2D-array at the decimal point or right aligned
+;  _ArrayJoin                   - sql-like joins for AutoIt-Arrays
 ;  _ArrayMap                    - apply a function to every element of a array ("map" the function)
 ;  _ArrayReduce                 - reduce the elements of a array to one value with an external function
 ;  _ArrayFilter                 - filter the elements of an array with a external function
@@ -733,6 +734,293 @@ Func _ArrayAinATo2d(ByRef $A)
 	Next
 	Return SetExtended($N, $a_Ret)
 EndFunc   ;==>_ArrayAinATo2d
+
+; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayJoin()
+; Description ...: Combines 2 2D arrays via corresponding properties (actual data or user-defined calculated) similar to JOIN in relational databases
+; Syntax ........: _ArrayJoin($aA, $aB, [$vCompA = 0, [$vCompB = Default, [$sJoinType = "inner"]]])
+; Parameters ....: $aA        - 2D array or Array-In-Array which should joined with $aB
+;                  $aB        - 2D array or Array-In-Array which should joined with $aA
+;                  $vCompA    - Rule for determining the link key for $aA.
+;                               defaults to 0 = value of first column element
+;                               Can be:
+;                               | single Integer: Column-Index for direct values
+;                               | Integer-Array: combined multiple direct values
+;                               | user-defined function: calculation rule as a function of the form
+;                                 function($a1DArray, $dummy): get the current array row as 1D-Array and calculate the key
+;                               | String: AutoIt-Code as string to calculate the key
+;                                 Must contain "$A", where "$A" represents the current array line as a 1D array.
+;                  $vCompB    - the same like $vCompA but for Array $aB
+;                               defaults to the same value as $aA
+;                  $sJoinType - type of joining (see https://www.w3schools.com/sql/sql_join.asp for explanation)
+;                               on of these:
+;                               | "inner": inner join - Returns records that have matching values in both tables
+;                               | "left" : left (outer) join - Returns all records from the left table, and the matched records from the right table
+;                               | "right": right (outer) join - Returns all records from the right table, and the matched records from the left table
+;                               | "outer" or "full": (full) outer join - Returns all records when there is a match in either left or right table
+; Return values .: Success: combined values as 2D-Array with columns of $aA first and $aB following. @extended = number of rows
+;                  Failure: null and set error to:
+;                           | @error = 1 : $aA is not a 1D/2D array
+;                           | @error = 2 : $aB is not a 1D/2D array
+;                           | @error = 3 : No data in $aA
+;                           | @error = 4 : No data in $aB
+;                           | @error = 5 : $aA is not a valid array-in-array
+;                           | @error = 6 : $aB is not a valid array-in-array
+;                           | @error = 7 : no valid form for $vCompA
+;                           | @error = 8 : no valid form for $vCompB
+;                           | @error = 9 : $vCompA is a string but it does not contain $A
+;                           | @error = 10: $vCompB is a string but it does not contain $A
+;                           | @error = 11: An array was passed for $vCompA but not a 1D array - invalid
+;                           | @error = 12: An array was passed for $vCompB but not a 1D array - invalid
+;                           | @error = 13: no valid value for $sJoinType passed
+;                           | @error = 14: No joins found - return array is therefore empty
+; Author ........: aspirinjunkie
+; Modified ......: 2024-02-12
+; Related .......: __ap_cb_getKey_Index_Single(), _Array__ap_cb_getKey_String(), __ap_cb_getKey_Index_Multi(), _Array2dToAinA()
+; Example .......: Yes
+;                  Global $aProds[][3] = [["apple", 1.5, "fruits"], ["Pancake", 3.0, "sweets"], ["banana", 2.0, "fruits"], ["banana", 1.0, "plastic"]]
+;                  Global $aColors[][2] = [["apple", "red"], ["coconut", "brown"], ["banana", "yellow"], ["banana", "brown"]]
+;
+;                  ; full outer join by first value of both arrays
+;                  $aJoin = _ArrayJoin($aProds, $aColors, 0, 0, "outer")
+;                  _ArrayDisplay($aJoin, "by first value")
+;
+;                  ; join using the first letter of first value in both arrays
+;                  $aJoin = _ArrayJoin($aProds, $aColors, "StringLeft($A[0], 1)")
+;                  _ArrayDisplay($aJoin, "by first letter")
+; =================================================================================================
+Func _ArrayJoin($aA, $aB, $vCompA = 0, $vCompB = Default, $sJoinType = "inner")
+	Local $bCbIsString = False
+
+	; same key descriptor for both arrays (if $vCompB = Default)
+	If IsKeyword($vCompB) = 1 Then $vCompB = $vCompA
+
+	; variables which describe the both Arrays
+	Local $nDimsA = UBound($aA, 0), $nDimsB = UBound($aB, 0), _
+			$nRowsA = UBound($aA, 1), $nRowsB = UBound($aB, 1), _
+			$nColsA = UBound($aA, 2), $nColsB = UBound($aB, 2)
+
+	If $nRowsA < 1 Then Return SetError(3, $nRowsA, Null)
+	If $nRowsB < 1 Then Return SetError(4, $nRowsB, Null)
+
+	; prepare Array A (convert into Array-In-Array)
+	Switch $nDimsA
+		Case 1 ; already Array-In-Array
+			If Not IsArray($nRowsA[0]) Then Return SetError(5, 0, Null)
+
+		Case 2 ; 2D-Array in Array-In-Array
+			; already dimension the number of sub-elements for the result array
+			ReDim $aA[$nRowsA][$nColsA + $nColsB]
+
+			; convert into Array-In-Array for better handling in the next steps
+			$aA = _Array2dToAinA($aA)
+
+		Case Else
+			Return SetError(1, $nDimsA, Null)
+
+	EndSwitch
+
+	; prepare Array B (convert into Array-In-Array)
+	Switch $nDimsB
+		Case 1 ; already Array-In-Array
+			If Not IsArray($nRowsB[0]) Then Return SetError(6, 0, Null)
+
+		Case 2
+			; convert into Array-In-Array for better handling in the next steps
+			$aB = _Array2dToAinA($aB)
+
+		Case Else
+			Return SetError(2, $nDimsB, Null)
+
+	EndSwitch
+
+	; prepare the key extraction function for $aA
+	Local $cbKeyA
+	Select
+		Case IsInt($vCompA) ; single array index as key
+			$cbKeyA = __ap_cb_getKey_Index_Single
+
+		Case IsFunc($vCompA) ; user defined function
+			$cbKeyA = $vCompA
+
+		Case IsString($vCompA) ; function directly as a string
+			If Not StringInStr($vCompA, '$A', 2) Then Return SetError(9, 0, Null)
+			Local $bBefore = Opt("ExpandEnvStrings", 1)
+			$cbKeyA = __ap_cb_getKey_String
+			$bCbIsString = True
+
+		Case IsArray($vCompA) ; multiple indices
+			If UBound($vCompA, 0) <> 1 Then Return SetError(11, UBound($vCompA, 0), Null)
+			$cbKeyA = __ap_cb_getKey_Index_Multi
+
+		Case Else ; no valid form for $vCompA
+			Return SetError(7, 0, Null)
+
+	EndSelect
+
+	; prepare the key extraction function for $aB
+	Local $cbKeyB
+	Select
+		Case IsInt($vCompB) ; single array index as key
+			$cbKeyB = __ap_cb_getKey_Index_Single
+
+		Case IsFunc($vCompB) ; user defined function
+			$cbKeyB = $vCompB
+
+		Case IsString($vCompB) ; function directly as a string
+			If Not StringInStr($vCompB, '$A', 2) Then Return SetError(10, 0, Null)
+			Local $bBefore = Opt("ExpandEnvStrings", 1)
+			$cbKeyB = __ap_cb_getKey_String
+			$bCbIsString = True
+
+		Case IsArray($vCompB) ; multiple indices
+			If UBound($vCompB, 0) <> 1 Then Return SetError(12, UBound($vCompB, 0), Null)
+			$cbKeyB = __ap_cb_getKey_Index_Multi
+
+		Case Else ; no valid form for $vCompB
+			Return SetError(8, 0, Null)
+
+	EndSelect
+
+	; convert $aA into Map
+	Local $mA[], $aData, $sKey
+	For $i = 0 To $nRowsA - 1
+		$aData = $aA[$i]
+		$sKey = $cbKeyA($aData, $vCompA)
+
+		Local $aSubElements[1]
+		If MapExists($mA, $sKey) Then ; record with same key already exists
+			$aSubElements = $mA[$sKey]
+			ReDim $aSubElements[UBound($aSubElements) + 1]
+		EndIf
+
+		$aSubElements[UBound($aSubElements) - 1] = $aData
+		$mA[$sKey] = $aSubElements
+
+	Next
+
+	; convert $aB into Map
+	Local $mB[]
+	For $i = 0 To $nRowsB - 1
+		$aData = $aB[$i]
+		$sKey = $cbKeyB($aData, $vCompB)
+
+		Local $aSubElements[1]
+		If MapExists($mB, $sKey) Then ; record with same key already exists
+			$aSubElements = $mB[$sKey]
+			ReDim $aSubElements[UBound($aSubElements) + 1]
+		EndIf
+
+		$aSubElements[UBound($aSubElements) - 1] = $aData
+		$mB[$sKey] = $aSubElements
+
+	Next
+
+	; join both arrays
+	Local $mRet[], $aDataTmpA, $aDataTmpB
+	Switch $sJoinType
+		Case "inner", "left", "outer", "full"
+			For $sKey In MapKeys($mA)
+				If $sJoinType = "inner" And Not MapExists($mB, $sKey) Then ContinueLoop
+
+				$aSubA = $mA[$sKey]
+				$aSubB = $mB[$sKey]
+
+				For $i = 0 To UBound($aSubA) - 1
+					$aDataTmpA = $aSubA[$i]
+
+					If IsArray($aSubB) Then ; corresponding right data
+						For $j = 0 To UBound($aSubB) - 1
+							$aDataTmpB = $aSubB[$j]
+
+							For $k = 0 To UBound($aDataTmpB) - 1
+								$aDataTmpA[$k + $nColsA] = $aDataTmpB[$k]
+							Next
+							MapAppend($mRet, $aDataTmpA)
+						Next
+
+					Else ; left join without corresponding right data
+						MapAppend($mRet, $aDataTmpA)
+					EndIf
+				Next
+			Next
+
+			; for outer join first do the left join, then add the rest
+			If $sJoinType = "outer" Or $sJoinType = "full" Then ContinueCase
+
+		Case "outer", "full"
+			; after left join add the rest
+			For $sKey In MapKeys($mB)
+				If MapExists($mA, $sKey) Then ContinueLoop
+
+				$aSubB = $mB[$sKey]
+
+				For $i = 0 To UBound($aSubB) - 1
+					Local $aData[$nColsA + $nColsB]
+					$aDataTmpB = $aSubB[$i]
+
+					For $k = 0 To UBound($aDataTmpB) - 1
+						$aData[$k + $nColsA] = $aDataTmpB[$k]
+					Next
+
+					MapAppend($mRet, $aData)
+				Next
+			Next
+
+		Case "right"
+			For $sKey In MapKeys($mB)
+
+				$aSubA = $mA[$sKey]
+				$aSubB = $mB[$sKey]
+
+				For $i = 0 To UBound($aSubB) - 1
+					Local $aData[$nColsA + $nColsB]
+
+					$aDataTmpB = $aSubB[$i]
+
+					For $k = 0 To UBound($aDataTmpB) - 1
+						$aData[$k + $nColsA] = $aDataTmpB[$k]
+					Next
+
+					If IsArray($aSubA) Then ; corresponding left data
+						For $j = 0 To UBound($aSubA) - 1
+							$aDataTmpA = $aSubA[$j]
+
+							For $k = 0 To $nColsA - 1
+								$aData[$k] = $aDataTmpA[$k]
+							Next
+							MapAppend($mRet, $aData)
+						Next
+
+					Else ; right join without corresponding left data
+						MapAppend($mRet, $aData)
+					EndIf
+				Next
+			Next
+
+		Case Else
+			Return SetError(13, 0, Null)
+	EndSwitch
+
+	; build the return Array
+	Local $nRowsRet = UBound($mRet), $nColsRet = $nColsA + $nColsB
+	Local $aRet[UBound($mRet)][$nColsRet], $iArr = 0
+	If $mRet < 1 Then Return SetError(14, $nRowsRet, $aRet)
+
+	For $sKey In MapKeys($mRet)
+		$aDataTmp = $mRet[$sKey]
+
+		For $i = 0 To $nColsRet - 1
+			$aRet[$iArr][$i] = $aDataTmp[$i]
+		Next
+
+		$iArr += 1
+	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
+	Return SetExtended(UBound($mRet), $aRet)
+EndFunc   ;==>_ArrayJoin
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: _ArrayMap
@@ -2197,6 +2485,26 @@ Func __ap_cb_comp_String(ByRef $A, Const $b = Default)
 	Local $vRet = Execute($sAPLUS_CBSTRING)
 	Return $vRet
 EndFunc
+
+; helper function for _ArrayJoin() which generates a primary key from a single array index
+Func __ap_cb_getKey_Index_Single(ByRef Const $aA, Const $iInd)
+	Return $aA[$iInd]
+EndFunc   ;==>__ap_cb_getKey_Index_Single
+
+; helper function for _ArrayJoin() which generates a primary key from several array indices
+Func __ap_cb_getKey_Index_Multi(ByRef Const $aA, Const $aInd)
+	Local $sKey = ""
+	For $i = 0 To UBound($aInd) - 1
+		$sKey &= $aA[$aInd[$i]] & "|"
+	Next
+	Return StringTrimRight($sKey, 1)
+EndFunc   ;==>__ap_cb_getKey_Index_Multi
+
+; helper function for _ArrayJoin() which determines a primary key from a calculation rule as AutoIt code in the string $sCBString
+Func __ap_cb_getKey_String(ByRef Const $A, Const $sCBSTRING)
+	Local $vRet = Execute($sCBSTRING)
+	Return SetError(@error, @extended, $vRet)
+EndFunc   ;==>__ap_cb_getKey_String
 
 ; #FUNCTION# ======================================================================================
 ; Name ..........: __ap_swap

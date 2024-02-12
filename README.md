@@ -19,6 +19,7 @@ The function list of the UDF:
 |_ArrayAinATo2d             | convert array-in-array into a 2D array |
 |_Array2String              | print a 1D/2D-array to console or variable clearly arranged |
 |_ArrayAlignDec             | align a 1D-array or a column of a 2D-array at the decimal point or right aligned |
+|_ArrayJoin                 | sql-like joins for AutoIt-Arrays |
 |_ArrayMap                  | apply a function to every element of a array ("map" the function) |
 |_ArrayReduce               | reduce the elements of a array to one value with an external function |
 |_ArrayFilter               | filter the elements of an array with a external function |
