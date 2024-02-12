@@ -26,6 +26,7 @@
 
 ;  ---- manipulation and conversion ----
 ;  _ArraySlice                  - python style array slicing to extract ranges, rows, columns, single values
+;  _ArrayAddGeneratedColumn()   - adds generated values as a column (like "generated column" in SQL)
 ;  _Array1DTo2D                 - convert a 1D-array into a 2D-array and take over the values to the first column (for inverted case - extract a row or column from 2D-array - use _ArraySlice)
 ;  _Array2dToAinA               - convert 2D-array into a array-in-array
 ;  _ArrayAinATo2d               - convert array-in-array into a 2D array
@@ -641,6 +642,93 @@ Func _ArrayRangeCreate($nStart, $nStop, $nStep = 1, $vDefault = Default)
 EndFunc   ;==>_ArrayRangeCreate
 
 ; #FUNCTION# ======================================================================================
+; Name ..........: _ArrayAddGeneratedColumn()
+; Description ...: Adds a column to a 2D array whose value can be derived from the other columns in the data set
+; Syntax ........: _ArrayAddGeneratedColumn(ByRef $aArray, $vCalc, [$iIndex = Ubound($aArray, 2)])
+; Parameters ....: $aArray    - the 2D array to which the generated column is to be added
+;                  $aB        - 2D array or Array-In-Array which should joined with $aA
+;                  $vCalc     - Rule for determining the value for the new column
+;                               Can be:
+;                               | user-defined function: calculation rule as a function of the form
+;                                 function($a1DArray, $dummy): get the current array row as 1D-Array and calculate the value
+;                               | String: AutoIt-Code as string to calculate the value
+;                                 Must contain "$A", where "$A" represents the current array line as a 1D array.
+;                  $iIndex    - Column index at which the generated value is to be inserted. Default: at the end of the array
+; Return values .: Success: True ($aArray is manipulated directly by reference), @extended = number of rows of $aArray
+;                  Failure: False and set error to:
+;                           | @error = 1 : $aArray is not a 1D/2D array
+;                           | @error = 2 : Invalid value range of $iIndex
+;                           | @error = 3 : no valid form for $vCalc
+; Author ........: aspirinjunkie
+; Modified ......: 2024-02-12
+; Related .......: __ap_cb_getKey_String()
+; Example .......: Yes
+;                  Global $aProds[][3] = [["apple", 1.5, "fruits"], ["Pancake", 3.0, "sweets"], ["banana", 2.0, "fruits"], ["banana", 1.0, "plastic"], ["cherry", 3.0, "fruits"]]
+;                  _ArrayAddGeneratedColumn($aProds, "StringLeft($A[0], 1)", 1)
+;                  _ArrayDisplay($aProds)
+; =================================================================================================
+Func _ArrayAddGeneratedColumn(ByRef $aArray, $vCalc, $iIndex = Ubound($aArray, 2))
+	Local $bCbIsString = False
+	Local $nRows = Ubound($aArray, 1)
+
+	If Ubound($aArray, 0) = 1 Then
+		; convert 1D-Array to 2D-Array
+		Local $aTmp[$nRows][1]
+		For $i = 0 To $nRows - 1
+			$aTmp[$i][0] = $aArray[$i]
+		Next
+		$aArray = $aTmp
+	EndIf
+
+	If Ubound($aArray, 0) <> 2 Then Return SetError(1, Ubound($aArray, 0), False)
+	If $iIndex > Ubound($aArray, 2) Or $iIndex < 0 Then Return SetError(2, $iIndex, False)
+
+	Local $nCols = Ubound($aArray, 2)
+
+	Local $cbKey
+	Select
+		Case IsFunc($vCalc) ; user defined function
+			$cbKey = $vCalc
+
+		Case IsString($vCalc) ; function directly as a string
+			Local $bBefore = Opt("ExpandEnvStrings", 1)
+			$cbKey = __ap_cb_getKey_String
+			$bCbIsString = True
+
+		Case Else ; no valid form for $vCalc
+			Return SetError(3, 0, False)
+
+	EndSelect
+
+	; add column
+	Redim $aArray[$nRows][$nCols + 1]
+
+	; add generated column
+	Local $vGenerated
+	For $iR = 0 To $nRows - 1
+
+		; first calculate the generated value (row as separate 1D-array needed)
+		Local $aRow[$nCols]
+		For $i = 0 To $nCols - 1
+			$aRow[$i] = $aArray[$iR][$i]
+		Next
+		$vGenerated = $cbKey($aRow, $vCalc)
+
+		; move columns after $iIndex by 1
+		For $iC = UBound($aArray, 2) - 2 To $iIndex Step - 1
+			$aArray[$iR][$iC + 1] = $aArray[$iR][$iC]
+		Next
+
+		; add generated value
+		$aArray[$iR][$iIndex] = $vGenerated
+	Next
+
+	If $bCbIsString Then Opt("ExpandEnvStrings", $bBefore)
+
+	Return SetExtended($nRows, True)
+EndFunc
+
+; #FUNCTION# ======================================================================================
 ; Name ..........: _Array1DTo2D()
 ; Description ...: convert a 1D-array into a 2D-array and take over the values to the first column
 ; Syntax ........: _Array1DTo2D(ByRef $aArray, Const $nCols[, $bInPlace = True])
@@ -754,7 +842,7 @@ EndFunc   ;==>_ArrayAinATo2d
 ;                               defaults to the same value as $aA
 ;                  $sJoinType - type of joining (see https://www.w3schools.com/sql/sql_join.asp for explanation)
 ;                               on of these:
-;                               | "inner": inner join - Returns records that have matching values in both tables
+;                               | "inner" (default): inner join - Returns records that have matching values in both tables
 ;                               | "left" : left (outer) join - Returns all records from the left table, and the matched records from the right table
 ;                               | "right": right (outer) join - Returns all records from the right table, and the matched records from the left table
 ;                               | "outer" or "full": (full) outer join - Returns all records when there is a match in either left or right table
@@ -2500,7 +2588,7 @@ Func __ap_cb_getKey_Index_Multi(ByRef Const $aA, Const $aInd)
 	Return StringTrimRight($sKey, 1)
 EndFunc   ;==>__ap_cb_getKey_Index_Multi
 
-; helper function for _ArrayJoin() which determines a primary key from a calculation rule as AutoIt code in the string $sCBString
+; helper function for _ArrayJoin() and _ArrayAddGeneratedColumn which determines a primary key from a calculation rule as AutoIt code in the string $sCBString
 Func __ap_cb_getKey_String(ByRef Const $A, Const $sCBSTRING)
 	Local $vRet = Execute($sCBSTRING)
 	Return SetError(@error, @extended, $vRet)

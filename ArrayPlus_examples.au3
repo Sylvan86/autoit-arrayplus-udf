@@ -166,9 +166,9 @@
 ;  Func __sqSum(ByRef $sum, $val)
 ;  	$sum += $val*$val
 ;  EndFunc
-#EndRegion _ArrayReduce()
+#EndRegion
 
-#Region _ArrayMinMax()()
+#Region _ArrayMinMax()
 ; example 1 - 1D-Array
 ;  Global $aArray1D[30]
 ;  For $i = 0 To 29
@@ -189,7 +189,7 @@
 ;  _ArrayDisplay($aArray2D)
 ;  $aMinMax = _ArrayMinMax($aArray2D)
 ;  _ArrayDisplay($aMinMax)
-#endRegion
+#EndRegion
 
 #Region _ArrayDeleteByCondition()
 
@@ -206,7 +206,7 @@
 ;  Local $a_Array = ["BASF", "Allianz", "Volkswagen", "BMW", "Bayer", "Telekom", "Post", "Linde"]
 ;  _ArrayDeleteByCondition($a_Array, 'StringLeft($A, 1) = "B"')
 ;  If Not @error Then _ArrayDisplay($a_Array)
-#endRegion
+#EndRegion
 
 #Region _ArrayFilter()
 
@@ -224,7 +224,7 @@
 ;  _ArrayFilter($a_Array, 'StringLeft($A, 1) = "B"')
 ;  If Not @error Then _ArrayDisplay($a_Array)
 
-#endRegion
+#EndRegion
 
 #Region _ArrayJoin()
 
@@ -239,5 +239,19 @@
 ;~ ; join using the first letter of first value in both arrays
 ;~ $aJoin = _ArrayJoin($aProds, $aColors, "StringLeft($A[0], 1)")
 ;~ _ArrayDisplay($aJoin, "by first letter")
+
+#EndRegion
+
+#Region _ArrayAddGeneratedColumn()
+
+; add column with the first letter of the first column value
+;~ Global $aProds[][3] = [["apple", 1.5, "fruits"], ["Pancake", 3.0, "sweets"], ["banana", 2.0, "fruits"], ["banana", 1.0, "plastic"], ["cherry", 3.0, "fruits"]]
+;~ _ArrayAddGeneratedColumn($aProds, "StringLeft($A[0], 1)", 1)
+;~ _ArrayDisplay($aProds, "first letter")
+
+;~ ; convert 1D-Array to 2D and add a column with random data
+;~ Global $aTest[] = ["apple", "pancake", "banana", "cherry", "strawberry", "cucumber"]
+;~ _ArrayAddGeneratedColumn($aTest, "Random(1,100, 1)", 1)
+;~ _ArrayDisplay($aTest, "new random column")
 
 #EndRegion

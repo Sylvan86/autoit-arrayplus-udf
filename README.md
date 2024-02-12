@@ -14,6 +14,7 @@ The function list of the UDF:
 |_ArrayRangeCreate()        | create a sequence as 1D-array - mainly helper function for _ArrayCreate |
 | ***manipulation and conversion*** | |
 |_ArraySlice                | python style array slicing to extract ranges, rows, columns, single values |
+|_ArrayAddGeneratedColumn   | adds generated values as a column (like "generated column" in SQL) |
 |_Array1DTo2D               | convert a 1D-array into a 2D-array and take over the values to the first column (for inverted case - extract a row or column from 2D-array - use _ArraySlice) |
 |_Array2dToAinA             | convert 2D-array into a array-in-array |
 |_ArrayAinATo2d             | convert array-in-array into a 2D array |
